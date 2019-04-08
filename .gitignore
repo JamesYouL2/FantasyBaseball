@@ -1,8 +1,6 @@
 
 *.csv
 *.pyc
-*.json
-*.json
 *.log
 *.json
 *.txt
