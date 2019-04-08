@@ -2,11 +2,9 @@
 *.csv
 *.pyc
 *.log
-*.json
 *.txt
 *.txt
 teams/roster.txt
-auth/oauth2yahoo.json
 auth/oauth2yahoo.json
 teams/roster.txt
 *.txt
