@@ -9,3 +9,5 @@ To run it, you need to change example.json in the auth folder to oauth2yahoo.jso
 You also need Python and numpy and pandas (I use an anaconda distribution).
 
 You need Firefox and Selenium in Firefox. Once you do that, you can run main.py and you should be fine.
+
+Refer here: https://github.com/yahoo-fantasy/nfl-fantasy-football for reference (copied most of the API handling from here).
