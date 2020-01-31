@@ -37,6 +37,7 @@ playeridmap = pd.read_csv("./playeridmap.txt",sep='\t',encoding='latin1')
 ##From CrunchTimeBaseball
 
 zipsh['playerid'] = zipsh['playerid'].apply(str)
+zipsp['playerid'] = zipsp['playerid'].apply(str)
 
 hitters = pd.concat((zipsh, steamerh))
 
