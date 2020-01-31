@@ -11,3 +11,6 @@ You also need Python and numpy and pandas (I use an anaconda distribution).
 You need Firefox and Selenium in Firefox. Once you do that, you can run main.py and you should be fine.
 
 Refer here: https://github.com/yahoo-fantasy/nfl-fantasy-football for reference (copied most of the API handling from here).
+
+PlayerIDMap:
+http://crunchtimebaseball.com/baseball_map.html
