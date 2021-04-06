@@ -8,7 +8,12 @@ import json
 from league_authorization import main as leagueauth
 from roster import updateroster #gets roster from yahoo api
 from fangraphsdownload import updatefangraphs #runs selenium on fangraphs in firefox to update roster
-#from yahooprojectionsmerge import merge as yahooprojectionsmerge
+from createrankings import exportrankings
+import configparser
+
+config = configparser.ConfigParser()
+
+config.read('leagueid.ini')
 
 updatefangraphs(link='https://www.fangraphs.com/projections.aspx?pos=all&stats=bat&type=rfangraphsdc&team=0&lg=all&players=0',path='hitters')
 updatefangraphs(link='https://www.fangraphs.com/projections.aspx?pos=all&stats=pit&type=rfangraphsdc&team=0&lg=all&players=0',path='pitchers')
@@ -20,4 +25,6 @@ with open('./auth/example.json') as json_yahoo_file:
     if 'access_token' not in (list(auths)):
             leagueauth()
 
-updateroster(leagueid=,numteams=)
+updateroster(leagueid=config['DEFAULT']['leagueid'],numteams=config['DEFAULT']['numteams'])
+
+exportrankings()
