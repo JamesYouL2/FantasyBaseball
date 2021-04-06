@@ -8,8 +8,16 @@ Created on Mon Apr  1 11:56:27 2019
 from yahoologin import yahoologin
 import csv
 
-def updateroster(leagueid,numteams,gameid=388):
+def getgameid(game='mlb'):
     oauth = yahoologin()
+    url = 'https://fantasysports.yahooapis.com/fantasy/v2/game/' + game
+    response = oauth.session.get(url, params={'format': 'json'})
+    data = response.json()
+    return data['fantasy_content']['game'][0]['game_id']
+
+def updateroster(leagueid,numteams):
+    oauth = yahoologin()
+    gameid = getgameid()
     with open('./teams/roster.txt', 'w', newline = '') as outfile:        
         csvwriter = csv.writer(outfile, delimiter='\t')
         outfile.truncate()
