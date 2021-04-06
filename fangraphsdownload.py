@@ -3,13 +3,19 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options as ChromeOptions
 #object of ChromeOptions
 import pathlib
+import os
 
 def updatefangraphs(link='https://www.fangraphs.com/projections.aspx?pos=all&stats=bat&type=rfangraphsdc', path=r'hitters'):
     default_download_directory=str(pathlib.Path().absolute() / path)
+    #print(default_download_directory+"/FanGraphs Leaderboard.csv")
+    
+    if os.path.exists(default_download_directory+"/FanGraphs Leaderboard.csv"):
+        os.remove(default_download_directory+"/FanGraphs Leaderboard.csv")
 
     op = webdriver.ChromeOptions()
     #add option
     op.add_argument('--enable-extensions')
+    op.add_argument('headless')
     prefs = {
     "download.default_directory": default_download_directory,
     "download.prompt_for_download": False,
