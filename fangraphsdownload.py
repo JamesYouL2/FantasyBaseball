@@ -23,7 +23,10 @@ def updatefangraphs(link='https://www.fangraphs.com/projections.aspx?pos=all&sta
     driver.get(link)
 
     #Close header
-    driver.find_element_by_xpath('//*[@id="ezmobfooter"]/span').click()
+    try:
+        driver.find_element_by_xpath('//*[@id="ezmobfooter"]/span').click()
+    except:
+        print("An exception occurred")
 
     #Download
-    driver.find_element_by_xpath('/html/body/form/div[3]/div[2]/div[3]/a').click()
+    driver.find_element_by_link_text('Export Data').click()
