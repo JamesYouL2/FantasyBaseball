@@ -1,9 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Apr  3 13:19:21 2019
-
-@author: jjy
-"""
 import json
 from league_authorization import main as leagueauth
 from roster import updateroster #gets roster from yahoo api
@@ -25,6 +19,6 @@ with open('./auth/example.json') as json_yahoo_file:
     if 'access_token' not in (list(auths)):
             leagueauth()
 
-updateroster(leagueid=config['DEFAULT']['leagueid'],numteams=config['DEFAULT']['numteams'])
+updateroster(leagueid=str(config['DEFAULT']['leagueid']),numteams=int(config['DEFAULT']['numteams']))
 
 exportrankings()
