@@ -18,7 +18,7 @@ def getgameid(game='mlb'):
 def updateroster(leagueid,numteams):
     oauth = yahoologin()
     gameid = getgameid()
-    with open('./teams/roster.txt', 'w', newline = '') as outfile:        
+    with open('./teams/roster.txt', 'w+', newline = '') as outfile:        
         csvwriter = csv.writer(outfile, delimiter='\t')
         outfile.truncate()
         csvwriter.writerow(['playerid','team'])
