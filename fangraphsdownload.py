@@ -35,5 +35,10 @@ def updatefangraphs(link='https://www.fangraphs.com/projections.aspx?pos=all&sta
     except:
         print("An exception occurred")
 
-    #Download
-    driver.find_element_by_link_text('Export Data').click()
+    for attempt in range(4):
+        try:
+            driver.find_element_by_link_text('Export Data').click()
+        except:
+            driver.find_element_by_xpath('//*[@id="ezmobfooter"]/span').click()
+        else:
+            break

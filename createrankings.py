@@ -88,4 +88,4 @@ def exportrankings():
 
     finalexport=pd.merge(finalmerge,roster,left_on='YAHOOID',right_on='playerid',how='left')
 
-    finalexport[['Name','Team','VORP','BestPos','team','G','GS','W','SV']].sort_values('VORP', ascending=False).nlargest(500,['VORP']).to_excel("Rankings.xlsx")
+    finalexport[['Name','Team','VORP','BestPos','team','G','GS','W','SV']].sort_values('VORP', ascending=False).nlargest(500,['VORP']).to_csv("rankings.csv")
