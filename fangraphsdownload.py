@@ -42,3 +42,5 @@ def updatefangraphs(link='https://www.fangraphs.com/projections.aspx?pos=all&sta
             driver.find_element_by_xpath('//*[@id="ezmobfooter"]/span').click()
         else:
             break
+    
+    time.sleep(10)
