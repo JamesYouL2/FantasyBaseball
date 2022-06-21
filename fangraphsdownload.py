@@ -28,7 +28,7 @@ def updatefangraphs(link='https://www.fangraphs.com/projections.aspx?pos=all&sta
 
     driver = webdriver.Chrome(options=op)
     driver.get(link)
-    time.sleep(10)
+    time.sleep(1)
     #Close header
     try:
         driver.find_element_by_xpath('//*[@id="ezmobfooter"]/span').click()
@@ -38,7 +38,7 @@ def updatefangraphs(link='https://www.fangraphs.com/projections.aspx?pos=all&sta
     for attempt in range(4):
         try:
             driver.find_element_by_link_text('Export Data').click()
-            time.sleep(5)
+            time.sleep(1)
             break
         except:
             try:
