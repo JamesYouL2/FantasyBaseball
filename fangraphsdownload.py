@@ -14,7 +14,8 @@ def updatefangraphs(link='https://www.fangraphs.com/projections.aspx?pos=all&sta
 
     op = webdriver.ChromeOptions()
     #add option
-    op.add_argument('--enable-extensions')
+    op.add_argument('--no-sandbox')
+    op.add_argument('--disable-dev-shm-usage')
     if debug == False:
         op.add_argument('headless')
     prefs = {
@@ -22,6 +23,7 @@ def updatefangraphs(link='https://www.fangraphs.com/projections.aspx?pos=all&sta
     "download.prompt_for_download": False,
     "download.directory_upgrade": True,
     "safebrowsing.enabled": True,
+    "profile.default_content_settings.popups": 0,
     }
     op.add_experimental_option("prefs", prefs)
     #pass option to webdriver object
@@ -46,6 +48,7 @@ def updatefangraphs(link='https://www.fangraphs.com/projections.aspx?pos=all&sta
             except:
                 try:
                     driver.find_element_by_link_text('Export Data').click()
+                    break
                 except:
                     try:
                         driver.find_element_by_id('om-dmsmk5bir4naafnwsqbw').click()
