@@ -43,7 +43,6 @@ def exportrankings():
     positionjoin.update(positions_unique)
     positionjoin.update(positions_oldunique)
     positionjoin=pd.Series(positionjoin).to_frame()
-    positionjoin.index=positionjoin.index.map(str)
     positionjoin.rename(columns={0:'Position'}, inplace=True)
 
     hittersmerge=pd.merge(hittersmean,positionjoin,how='left',left_on='playerid',right_index=True)
