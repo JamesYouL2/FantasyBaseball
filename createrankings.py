@@ -77,6 +77,7 @@ def exportrankings():
     pitchersmean['VORP']=pitchersmean['value']-pitchersmean['ReplacementValue']
 
     final=pd.concat([hittersmerge,pitchersmean])
+    final['playerid']=final['playerid'].apply(str)
 
     ##get name
     finalmerge=pd.merge(final,playeridmap,left_on='playerid',right_on='IDFANGRAPHS',how='left')
@@ -85,6 +86,8 @@ def exportrankings():
 
     roster = pd.read_csv("./teams/roster.txt",sep='\t')
 
-    finalexport=pd.merge(finalmerge,roster,left_on='YAHOOID',right_on='playerid',how='left')
+    finalmerge['YAHOOID_int']=finalmerge['YAHOOID'].fillna(0).apply(int)
+
+    finalexport=pd.merge(finalmerge,roster,left_on='YAHOOID_int',right_on='playerid',how='left')
 
     finalexport[['Name','Team','VORP','BestPos','team','G','GS','W','SV']].sort_values('VORP', ascending=False).nlargest(500,['VORP']).to_csv("rankings.csv")
