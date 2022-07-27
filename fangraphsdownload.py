@@ -45,7 +45,7 @@ def updatefangraphs(link='https://www.fangraphs.com/projections.aspx?pos=all&sta
     for attempt in range(4):
         try:
             driver.find_element_by_link_text('Export Data').click()
-            time.sleep(2)
+            time.sleep(5)
             break
         except:
             try:
@@ -53,7 +53,7 @@ def updatefangraphs(link='https://www.fangraphs.com/projections.aspx?pos=all&sta
             except:
                 try:
                     driver.find_element_by_link_text('Export Data').click()
-                    time.sleep(2)
+                    time.sleep(5)
                     break
                 except:
                     try:
