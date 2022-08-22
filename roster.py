@@ -21,13 +21,21 @@ def updateroster(leagueid,numteams):
     with open('./teams/roster.txt', 'w+', newline = '') as outfile:        
         csvwriter = csv.writer(outfile, delimiter='\t')
         outfile.truncate()
-        csvwriter.writerow(['playerid','team'])
+        csvwriter.writerow(['playerid','player_name','team','percent_owned'])
         for team in range(1, numteams+1): #assumes 10-team league
-            url = 'https://fantasysports.yahooapis.com/fantasy/v2/team/'+str(gameid)+'.l.'+str(leagueid)+'.t.'+str(team)+'/roster'
+            #print(url)
+            url = 'https://fantasysports.yahooapis.com/fantasy/v2/team/'+str(gameid)+'.l.'+str(leagueid)+'.t.'+str(team)+'/players/percent_owned'
             response = oauth.session.get(url, params={'format': 'json'})
             data = response.json()
             playercount = 0
-            for item in (data["fantasy_content"]["team"][1]["roster"]["0"]["players"]):
+            for item in (data["fantasy_content"]["team"][1]["players"]):
                 if 'count' not in item:
-                    csvwriter.writerow([data["fantasy_content"]["team"][1]["roster"]["0"]["players"][str(playercount)]["player"][0][1]["player_id"],data["fantasy_content"]["team"][0][2]["name"]])
-                    playercount = playercount + 1
+                    try:
+                        percentowned = data["fantasy_content"]["team"][1]["players"][str(playercount)]["player"][1]['percent_owned'][1]['value']
+                    except:
+                        print(str(playercount),numteams)
+                    finally:
+                            row = [data["fantasy_content"]["team"][1]["players"][str(playercount)]["player"][0][1]["player_id"],data["fantasy_content"]["team"][1]["players"][str(playercount)]["player"][0][2]["name"]["full"],data["fantasy_content"]["team"][0][2]["name"],percentowned]
+                            #print(row)
+                            csvwriter.writerow(row)
+                            playercount = playercount + 1
