@@ -33,7 +33,7 @@ def updatefangraphs(link='https://www.fangraphs.com/projections.aspx?pos=all&sta
     op.add_experimental_option("prefs", prefs)
     #pass option to webdriver object
 
-    driver = webdriver.Chrome(options=op,desired_capabilities=caps)
+    driver = webdriver.Chrome(options=op,desired_capabilities=caps,executable_path="/usr/local/bin/chromedriver")
     driver.get(link)
     time.sleep(2)
     #Close header
@@ -45,7 +45,7 @@ def updatefangraphs(link='https://www.fangraphs.com/projections.aspx?pos=all&sta
     for attempt in range(4):
         try:
             driver.find_element_by_link_text('Export Data').click()
-            time.sleep(5)
+            time.sleep(15)
             break
         except:
             try:
@@ -53,7 +53,7 @@ def updatefangraphs(link='https://www.fangraphs.com/projections.aspx?pos=all&sta
             except:
                 try:
                     driver.find_element_by_link_text('Export Data').click()
-                    time.sleep(5)
+                    time.sleep(15)
                     break
                 except:
                     try:
