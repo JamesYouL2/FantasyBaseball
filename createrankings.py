@@ -1,5 +1,7 @@
 import pandas as pd
 import numpy as np
+import pybaseball
+
 
 def GetPosition (array):
     if isinstance(array,np.ndarray):
@@ -15,14 +17,14 @@ def GetPosition (array):
             return '1B'
         if array.__contains__('OF'):
             return 'OF'
-    else: 
+    else:
         return '1B'
 
 def exportrankings():
-    hittersmean = pd.read_csv("./hitters/FanGraphs Leaderboard.csv")
-    pitchersmean = pd.read_csv("./pitchers/FanGraphs Leaderboard.csv")
-    positions = pd.read_csv("./positions/FanGraphs Leaderboard.csv")
-    positionsold = pd.read_csv("./positionsold/FanGraphs Leaderboard.csv")
+    hittersmean = pd.read_json('https://www.fangraphs.com/api/projections?stats=bat&type=rthebatx')
+    pitchersmean = pd.read_json('https://www.fangraphs.com/api/projections?stats=pit&type=rthebat')
+    positionsold = pybaseball.fielding_stats(2022, qual=0)
+    positions = pybaseball.fielding_stats(2023, qual=0)
     playeridmap = pd.read_csv("SFBB Player ID Map - PLAYERIDMAP.csv")
     ##From Smart Fantasy Baseball
 
@@ -36,8 +38,8 @@ def exportrankings():
     positions['Pos']=positions['Pos'].replace(['LF','CF','RF'],'OF')
     positionsold['Pos']=positionsold['Pos'].replace(['LF','CF','RF'],'OF')
 
-    positions_unique=positions.loc[(positions['G']>=10) | (positions['GS']>=5)].groupby('playerid')['Pos'].unique()
-    positions_oldunique=positionsold.loc[(positionsold['G']>=10) | (positionsold['GS']>=5)].groupby('playerid')['Pos'].unique()
+    positions_unique=positions.loc[(positions['G']>=10) | (positions['GS']>=5)].groupby('IDfg')['Pos'].unique()
+    positions_oldunique=positionsold.loc[(positionsold['G']>=10) | (positionsold['GS']>=5)].groupby('IDfg')['Pos'].unique()
 
     positionjoin = dict()
     positionjoin.update(positions_unique)
@@ -46,6 +48,10 @@ def exportrankings():
     positionjoin.rename(columns={0:'Position'}, inplace=True)
 
     positionjoin.index=positionjoin.index.map(str)
+    #print(positionjoin.dtypes)
+    #print(hittersmean.dtypes)
+
+    hittersmean['playerid']=hittersmean['playerids']
 
     hittersmerge=pd.merge(hittersmean,positionjoin,how='left',left_on='playerid',right_index=True)
 
@@ -77,6 +83,7 @@ def exportrankings():
     pitchersmean['ReplacementValue']=float(pitchersmean.loc[pitchersmean['utilrank']==110]['value'])
 
     pitchersmean['VORP']=pitchersmean['value']-pitchersmean['ReplacementValue']
+    pitchersmean['playerid']=pitchersmean['playerids']
 
     final=pd.concat([hittersmerge,pitchersmean])
     final['playerid']=final['playerid'].apply(str)
@@ -84,7 +91,7 @@ def exportrankings():
     ##get name
     finalmerge=pd.merge(final,playeridmap,left_on='playerid',right_on='IDFANGRAPHS',how='left')
 
-    finalmerge.nlargest(500,['VORP']).to_csv("ZipsSteamer.txt",sep='\t')
+    #finalmerge.nlargest(500,['VORP']).to_csv("ZipsSteamer.txt",sep='\t')
 
     roster = pd.read_csv("./teams/roster.txt",sep='\t')
 
@@ -92,4 +99,4 @@ def exportrankings():
 
     finalexport=pd.merge(finalmerge,roster,left_on='YAHOOID_int',right_on='playerid',how='left')
 
-    finalexport[['Name','Team','VORP','BestPos','team','G','GS','W','SV','percent_owned']].sort_values('VORP', ascending=False).nlargest(500,['VORP']).to_csv("rankings.csv")
+    finalexport[['PlayerName','Team','VORP','BestPos','team','G','GS','W','SV','percent_owned']].sort_values('VORP', ascending=False).nlargest(500,['VORP']).to_csv("rankings.csv")
