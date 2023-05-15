@@ -3,7 +3,6 @@ from turtle import update
 from league_authorization import main as leagueauth
 from roster import updateroster  # gets roster from yahoo api
 # runs selenium on fangraphs in firefox to update roster
-from fangraphsdownload import updatefangraphs
 from createrankings import exportrankings
 import configparser
 
