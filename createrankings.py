@@ -17,6 +17,8 @@ def GetPosition (array):
             return '1B'
         if array.__contains__('OF'):
             return 'OF'
+        else:
+            return '1B'
     else:
         return '1B'
 
@@ -96,6 +98,10 @@ def exportrankings():
     roster = pd.read_csv("./teams/roster.txt",sep='\t')
 
     finalmerge['YAHOOID_int']=finalmerge['YAHOOID'].fillna(0).apply(int)
+    finalmerge.drop_duplicates(subset=['Name', 'POS'],inplace=True)
+
+    finalmerge.loc[finalmerge.IDPLAYER == 'ohtansh01','YAHOOID_int'] = 1000001
+    finalmerge.loc[finalmerge.IDPLAYER == 'ohtansh01p','YAHOOID_int'] = 1000002
 
     finalexport=pd.merge(finalmerge,roster,left_on='YAHOOID_int',right_on='playerid',how='left')
 
