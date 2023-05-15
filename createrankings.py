@@ -98,10 +98,10 @@ def exportrankings():
     roster = pd.read_csv("./teams/roster.txt",sep='\t')
 
     finalmerge['YAHOOID_int']=finalmerge['YAHOOID'].fillna(0).apply(int)
-    finalmerge.drop_duplicates(subset=['Name', 'POS'],inplace=True)
+    finalmerge.drop_duplicates(subset=['Name', 'AB'],inplace=True)
 
-    finalmerge.loc[finalmerge.IDPLAYER == 'ohtansh01','YAHOOID_int'] = 1000001
-    finalmerge.loc[finalmerge.IDPLAYER == 'ohtansh01p','YAHOOID_int'] = 1000002
+    finalmerge.loc[(finalmerge.YAHOOID_int == 10835) & (finalmerge.PA > 0),'YAHOOID_int'] = 1000001
+    finalmerge.loc[(finalmerge.YAHOOID_int == 10835) & (finalmerge.PA.isnull()),'YAHOOID_int'] = 1000002
 
     finalexport=pd.merge(finalmerge,roster,left_on='YAHOOID_int',right_on='playerid',how='left')
 
