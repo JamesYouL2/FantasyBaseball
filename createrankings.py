@@ -23,8 +23,8 @@ def GetPosition (array):
         return '1B'
 
 def exportrankings():
-    hittersmean = pd.read_json('https://www.fangraphs.com/api/projections?stats=bat&type=rthebatx')
-    pitchersmean = pd.read_json('https://www.fangraphs.com/api/projections?stats=pit&type=rthebat')
+    hittersmean = pd.read_json('https://www.fangraphs.com/api/projections?stats=bat&type=ratcdc')
+    pitchersmean = pd.read_json('https://www.fangraphs.com/api/projections?stats=pit&type=ratcdc')
     positionsold = pybaseball.fielding_stats(2022, qual=0)
     positions = pybaseball.fielding_stats(2023, qual=0)
     playeridmap = pd.read_csv("SFBB Player ID Map - PLAYERIDMAP.csv")
