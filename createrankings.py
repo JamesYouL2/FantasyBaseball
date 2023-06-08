@@ -35,7 +35,7 @@ def exportrankings():
     hittersmean['OPSValue'] = (hittersmean['OBPOnTeam']+hittersmean['SLGOnTeam']-.774)/.006
 
     hittersmean['AVGValue'] = ((hittersmean['H']+1768)/(hittersmean['AB']+6100)-.267)/.0024
-    hittersmean['value'] = hittersmean['OPSValue']+(hittersmean['R']/8.92+hittersmean['HR']/7.5+hittersmean['RBI']/8.92+hittersmean['SB']/6.0)
+    hittersmean['value'] = hittersmean['OPSValue']+hittersmean['R']/8.92+hittersmean['HR']/8.0+hittersmean['RBI']/8.92+hittersmean['SB']/5.0+hittersmean['H']/9.0
 
     positions['Pos']=positions['Pos'].replace(['LF','CF','RF'],'OF')
     positionsold['Pos']=positionsold['Pos'].replace(['LF','CF','RF'],'OF')
