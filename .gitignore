@@ -1,12 +1,16 @@
 
+#Data files
 *.csv
 *.pyc
 *.log
-*.txt
 *.xlsx
+*.tab
+
+#config files
 auth/oauth2yahoo.json
-*.txt
 leagueid.ini
+
+#system files
 *.crdownload
 *.DS_Store
 .vscode/*
