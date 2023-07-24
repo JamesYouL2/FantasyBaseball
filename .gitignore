@@ -5,6 +5,7 @@
 *.log
 *.xlsx
 *.tab
+teams/roster.txt
 
 #config files
 auth/oauth2yahoo.json

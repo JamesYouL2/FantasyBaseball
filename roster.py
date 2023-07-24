@@ -7,6 +7,7 @@ Created on Mon Apr  1 11:56:27 2019
 
 from yahoologin import yahoologin
 import csv
+import os
 
 def getgameid(game='mlb'):
     oauth = yahoologin()
@@ -18,6 +19,7 @@ def getgameid(game='mlb'):
 def updateroster(leagueid,numteams):
     oauth = yahoologin()
     gameid = getgameid()
+    createfolder()
     with open('./teams/roster.txt', 'w+', newline = '') as outfile:        
         csvwriter = csv.writer(outfile, delimiter='\t')
         outfile.truncate()
@@ -39,3 +41,12 @@ def updateroster(leagueid,numteams):
                             #print(row)
                             csvwriter.writerow(row)
                             playercount = playercount + 1
+
+def createfolder():
+    path = "teams"
+    # Check whether the specified path exists or not
+    isExist = os.path.exists(path)
+    if not isExist:
+    # Create a new directory because it does not exist
+        os.makedirs(path)
+        print("The new directory is created!")
