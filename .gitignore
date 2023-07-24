@@ -3,14 +3,10 @@
 *.pyc
 *.log
 *.txt
-*.txt
-teams/roster.txt
+*.xlsx
 auth/oauth2yahoo.json
-teams/roster.txt
 *.txt
-Rankings.xlsx
 leagueid.ini
-~$Rankings.xlsx
 *.crdownload
 *.DS_Store
-rankings.tab
+.vscode/*
