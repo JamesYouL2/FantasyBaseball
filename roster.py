@@ -8,6 +8,7 @@ Created on Mon Apr  1 11:56:27 2019
 from yahoologin import yahoologin
 import csv
 import os
+import logging
 
 def getgameid(game='mlb'):
     oauth = yahoologin()
@@ -16,31 +17,48 @@ def getgameid(game='mlb'):
     data = response.json()
     return data['fantasy_content']['game'][0]['game_id']
 
+def _get_team_keys(leagueid):
+    oauth = yahoologin()
+    gameid = getgameid()
+    url = f'https://fantasysports.yahooapis.com/fantasy/v2/league/{str(gameid)}.l.str({leagueid}/standings'
+    response = oauth.session.get(url, params={'format': 'json'})
+    data = response.json()
+    team_list = list()
+    for i in data['fantasy_content']['league'][1]['standings'][0]['teams']:
+        team_list.append(data['fantasy_content']['league'][1]['standings'][0]['teams'][i]['team'][0][0]['team_key'])
+    return team_list
+
 def updateroster(leagueid,numteams):
     oauth = yahoologin()
     gameid = getgameid()
+    logging.info(f"Game ID: {gameid}")
+    team_list = _get_team_keys(leagueid)
+
     createfolder()
     with open('./teams/roster.txt', 'w+', newline = '') as outfile:        
         csvwriter = csv.writer(outfile, delimiter='\t')
         outfile.truncate()
         csvwriter.writerow(['playerid','player_name','team','percent_owned'])
-        for team in range(1, numteams+1): #assumes 10-team league
-            #print(url)
-            url = 'https://fantasysports.yahooapis.com/fantasy/v2/team/'+str(gameid)+'.l.'+str(leagueid)+'.t.'+str(team)+'/players/percent_owned'
+        for team in team_list:
+            url = f'https://fantasysports.yahooapis.com/fantasy/v2/team/{str(team)}/players/percent_owned'
             response = oauth.session.get(url, params={'format': 'json'})
             data = response.json()
             playercount = 0
-            for item in (data["fantasy_content"]["team"][1]["players"]):
-                if 'count' not in item:
-                    try:
-                        percentowned = data["fantasy_content"]["team"][1]["players"][str(playercount)]["player"][1]['percent_owned'][1]['value']
-                    except:
-                        print(str(playercount),numteams)
-                    finally:
-                            row = [data["fantasy_content"]["team"][1]["players"][str(playercount)]["player"][0][1]["player_id"],data["fantasy_content"]["team"][1]["players"][str(playercount)]["player"][0][2]["name"]["full"],data["fantasy_content"]["team"][0][2]["name"],percentowned]
-                            #print(row)
-                            csvwriter.writerow(row)
-                            playercount = playercount + 1
+            try:
+                for item in (data["fantasy_content"]["team"][1]["players"]):
+                    if 'count' not in item:
+                        try:
+                            percentowned = data["fantasy_content"]["team"][1]["players"][str(playercount)]["player"][1]['percent_owned'][1]['value']
+                        except:
+                            print(str(playercount),numteams)
+                        finally:
+                                row = [data["fantasy_content"]["team"][1]["players"][str(playercount)]["player"][0][1]["player_id"],data["fantasy_content"]["team"][1]["players"][str(playercount)]["player"][0][2]["name"]["full"],data["fantasy_content"]["team"][0][2]["name"],percentowned]
+                                #print(row)
+                                csvwriter.writerow(row)
+                                playercount = playercount + 1
+            except KeyError as e:
+                logging.error(f"Error in Data: {data}")
+                raise e
 
 def createfolder():
     path = "teams"
