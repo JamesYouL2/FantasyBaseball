@@ -26,8 +26,11 @@ def _get_team_keys(leagueid):
     team_list = list()
     try:
         for i in data['fantasy_content']['league'][1]['standings'][0]['teams']:
-            team_list.append(data['fantasy_content']['league'][1]['standings'][0]['teams'][i]['team'][0][0]['team_key'])
-    except KeyError as e:
+            if i == 'count':
+                continue
+            team_key=data['fantasy_content']['league'][1]['standings'][0]['teams'][f"{str(i)}"]['team'][0][0]['team_key']    
+            team_list.append(team_key)
+    except Exception as e:
         logging.error(f"Error in url: {url}")
         logging.error(f"Error in Data: {data}")
         raise e
