@@ -20,7 +20,7 @@ def getgameid(game='mlb'):
 def _get_team_keys(leagueid):
     oauth = yahoologin()
     gameid = getgameid()
-    url = f'https://fantasysports.yahooapis.com/fantasy/v2/league/{str(gameid)}.l{str(leagueid)}/standings'
+    url = f'https://fantasysports.yahooapis.com/fantasy/v2/league/{str(gameid)}.l.{str(leagueid)}/standings'
     response = oauth.session.get(url, params={'format': 'json'})
     data = response.json()
     team_list = list()
