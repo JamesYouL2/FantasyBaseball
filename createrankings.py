@@ -110,6 +110,9 @@ def exportrankings(ros=True):
     finalmerge.loc[(finalmerge.YAHOOID_int == 10835) & (finalmerge.PA > 0),'YAHOOID_int'] = 1000001
     finalmerge.loc[(finalmerge.YAHOOID_int == 10835) & (finalmerge.PA.isnull()),'YAHOOID_int'] = 1000002
 
+    #format player names
+    finalexport['PlayerName']=finalexport['PlayerName'].str.normalize('NFKD').str.encode('ascii', errors='ignore').str.decode('utf-8')
+
     finalexport=pd.merge(finalmerge,roster,left_on='YAHOOID_int',right_on='playerid',how='left')
 
     finalexport[['PlayerName','Team','value','VORP','BestPos','team','G','GS','W','SV','percent_owned']].sort_values('VORP', ascending=False).nlargest(500,['VORP']).to_csv("rankings.tab", sep='\t')
