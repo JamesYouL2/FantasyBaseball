@@ -24,8 +24,13 @@ def _get_team_keys(leagueid):
     response = oauth.session.get(url, params={'format': 'json'})
     data = response.json()
     team_list = list()
-    for i in data['fantasy_content']['league'][1]['standings'][0]['teams']:
-        team_list.append(data['fantasy_content']['league'][1]['standings'][0]['teams'][i]['team'][0][0]['team_key'])
+    try:
+        for i in data['fantasy_content']['league'][1]['standings'][0]['teams']:
+            team_list.append(data['fantasy_content']['league'][1]['standings'][0]['teams'][i]['team'][0][0]['team_key'])
+    except KeyError as e:
+        logging.error(f"Error in url: {url}")
+        logging.error(f"Error in Data: {data}")
+        raise e
     return team_list
 
 def updateroster(leagueid,numteams):
