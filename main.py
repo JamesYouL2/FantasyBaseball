@@ -17,4 +17,4 @@ with open('./auth/example.json') as json_yahoo_file:
 updateroster(leagueid=str(config['DEFAULT']['leagueid']), numteams=int(
     config['DEFAULT']['numteams']))
 
-exportrankings()
+exportrankings(ros=False)

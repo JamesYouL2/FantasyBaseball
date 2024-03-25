@@ -22,9 +22,14 @@ def GetPosition (array):
     else:
         return '1B'
 
-def exportrankings():
-    hittersmean = pd.read_json('https://www.fangraphs.com/api/projections?stats=bat&type=ratcdc')
-    pitchersmean = pd.read_json('https://www.fangraphs.com/api/projections?stats=pit&type=ratcdc')
+def exportrankings(ros=True):
+    if ros:
+        hittersmean = pd.read_json('https://www.fangraphs.com/api/projections?stats=bat&type=ratcdc')
+        pitchersmean = pd.read_json('https://www.fangraphs.com/api/projections?stats=pit&type=ratcdc')
+    else:
+        hittersmean = pd.read_json('https://www.fangraphs.com/api/projections?stats=bat&type=atc')
+        pitchersmean = pd.read_json('https://www.fangraphs.com/api/projections?stats=pit&type=atc')
+
     positionsold = pybaseball.fielding_stats(2023, qual=0)
     positions = pybaseball.fielding_stats(2024, qual=0)
     playeridmap = pd.read_csv("SFBB Player ID Map - PLAYERIDMAP.csv")
@@ -74,9 +79,11 @@ def exportrankings():
 
     ########################
     #CHANGE THE COLUMNS BELOW BASED ON SGP VALUES FOR YOUR LEAGUE
-    pitchersmean['ERA']=((525.55+pitchersmean['ER'])*9/(1350.0+pitchersmean['IP'])-3.5)/-0.1062
-    pitchersmean['WHIP'] =((1620.0+pitchersmean['H']+pitchersmean['BB'])/(1350.0+pitchersmean['IP'])-1.2)/-0.0201
-    pitchersmean['value'] = pitchersmean['ERA']+pitchersmean['WHIP']+(pitchersmean['W']/4.05+pitchersmean['K/9']*pitchersmean['IP']/(55.0*9.0)+(pitchersmean['SV']+pitchersmean['HLD'])/10.0)
+    #I think that you can use SGP based on MLB league averages
+    pitchersmean['ERA']=((525.55+pitchersmean['ER'])*9/(1350.0+pitchersmean['IP'])-3.5)/-0.106
+    pitchersmean['WHIP'] =((1620.0+pitchersmean['H']+pitchersmean['BB'])/(1350.0+pitchersmean['IP'])-1.2)/-0.02
+    pitchersmean['KBB'] = (((55*9+pitchersmean['SO'])/(55*3+pitchersmean['BB']))-3)/0.09
+    pitchersmean['value'] = pitchersmean['KBB']+pitchersmean['ERA']+pitchersmean['WHIP']+(pitchersmean['W']/4.05+(pitchersmean['SV']+pitchersmean['HLD'])/10.0)
     ########################
 
     pitchersmean['utilrank']=pitchersmean['value'].rank(ascending=False)
