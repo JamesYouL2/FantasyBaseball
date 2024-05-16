@@ -9,10 +9,10 @@ def GetPosition (array):
             return 'C'
         if array.__contains__('2B'):
             return '2B'
-        if array.__contains__('SS'):
-            return 'SS'
         if array.__contains__('3B'):
             return '3B'
+        if array.__contains__('SS'):
+            return 'SS'
         if array.__contains__('1B'):
             return '1B'
         if array.__contains__('OF'):
