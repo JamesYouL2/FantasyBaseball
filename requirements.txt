@@ -1,5 +1,0 @@
-numpy
-pandas
-yahoo_oauth
-ipykernel
-pybaseball
