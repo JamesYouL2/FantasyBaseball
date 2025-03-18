@@ -1,55 +1,27 @@
 from yahoo_oauth import OAuth2
-import json
-import os
 from loguru import logger
+import os
 
-class Yahoo_Api():
-    def __init__(self,
-                 consumer_key,
-                 consumer_secret
-                ):
-        self._consumer_key = consumer_key
-        self._consumer_secret = consumer_secret
-        self._authorization = None
-        
-    def _login(self):
-        global oauth
-        oauth = OAuth2(None, None, from_file='./auth/oauth2yahoo.json')
-        if not oauth.token_is_valid():
-            oauth.refresh_access_token()
 
-class Authorize():
-    def AuthorizeLeague(self):
-        # UPDATE LEAGUE GAME ID
-        yahoo_api._login()
-        url = 'https://fantasysports.yahooapis.com/fantasy/v2/league/380.l.XXXXXX/transactions'
-        response = oauth.session.get(url, params={'format': 'json'})
-        r = response.json()
-        logger.info(r)
-        
-class Bot():
-    def __init__(self, yahoo_api):
-        self._yahoo_api = yahoo_api
-    def run(self):
-        # Data Updates
-        at = Authorize()
-        at.AuthorizeLeague()
-        logger.info('Authorization Complete')
+def get_consumer_key(env_var="YAHOO_CONSUMER_KEY"):
+    # Load consumer key and secret from environment variables or set them directly
+    consumer_key = os.environ.get(env_var)
+    return consumer_key
 
-def get_token():
-    with open('./auth/oauth2yahoo.json') as json_yahoo_file:
-        auths = json.load(json_yahoo_file)
-    yahoo_consumer_key = auths['consumer_key']
-    yahoo_consumer_secret = auths['consumer_secret']
-    json_yahoo_file.close()
-    return yahoo_consumer_key, yahoo_consumer_secret
 
-def main():
-    yahoo_consumer_key, yahoo_consumer_secret = get_token()
-    global yahoo_api
-    yahoo_api = Yahoo_Api(yahoo_consumer_key, yahoo_consumer_secret,)
-    bot = Bot(yahoo_api)
-    bot.run()
+def get_consumer_secret(env_var="YAHOO_CONSUMER_SECRET"):
+    consumer_secret = os.environ.get(env_var)
+    return consumer_secret
 
-if __name__ == "__main__":
-    main()
+
+def initialize_oauth(
+    file_path="auth/oauth2yahoo.json",
+    consumer_key_env_var="YAHOO_CONSUMER_KEY",
+    consumer_secret_env_var="YAHOO_CONSUMER_SECRET",
+):
+    consumer_key = get_consumer_key(consumer_key_env_var)
+    consumer_secret = get_consumer_secret(consumer_secret_env_var)
+    oauth = OAuth2(consumer_key, consumer_secret, from_file=file_path)
+    if not oauth.token_is_valid():
+        oauth.refresh_access_token()
+    return oauth
