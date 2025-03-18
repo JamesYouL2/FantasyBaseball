@@ -5,10 +5,10 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "ipykernel>=6.29.5",
-    "loguru>=0.7.3",
-    "numpy>=2.2.4",
-    "pandas>=2.2.3",
-    "pybaseball>=2.2.7",
-    "yahoo-oauth>=2.1.1",
+    "ipykernel==6.29.5",
+    "loguru==0.7.3",
+    "numpy==2.2.4",
+    "pandas==2.2.3",
+    "pybaseball==2.2.7",
+    "yahoo-oauth==2.1.1",
 ]

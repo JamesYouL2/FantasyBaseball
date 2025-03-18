@@ -286,12 +286,12 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "ipykernel", specifier = ">=6.29.5" },
-    { name = "loguru", specifier = ">=0.7.3" },
-    { name = "numpy", specifier = ">=2.2.4" },
-    { name = "pandas", specifier = ">=2.2.3" },
-    { name = "pybaseball", specifier = ">=2.2.7" },
-    { name = "yahoo-oauth", specifier = ">=2.1.1" },
+    { name = "ipykernel", specifier = "==6.29.5" },
+    { name = "loguru", specifier = "==0.7.3" },
+    { name = "numpy", specifier = "==2.2.4" },
+    { name = "pandas", specifier = "==2.2.3" },
+    { name = "pybaseball", specifier = "==2.2.7" },
+    { name = "yahoo-oauth", specifier = "==2.1.1" },
 ]
 
 [[package]]
