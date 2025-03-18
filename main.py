@@ -1,12 +1,12 @@
 import json
 from league_authorization import initialize_oauth
-from roster import updateroster  # gets roster from yahoo api
+from roster import YahooRoster  # gets roster from yahoo api
 # runs selenium on fangraphs in firefox to update roster
 from createrankings import exportrankings
 import configparser
 
 config = configparser.ConfigParser()
 
-updateroster(leagueid=str(config['DEFAULT']['leagueid']))
+YahooRoster(leagueid=str(config['DEFAULT']['leagueid']))
 
 exportrankings(ros=True)

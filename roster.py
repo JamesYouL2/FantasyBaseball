@@ -12,7 +12,8 @@ from yahoo_oauth import OAuth2
 from league_authorization import initialize_oauth
 
 class YahooRoster:
-    def __init__(self):
+    def __init__(self, leagueid):
+        self.leagueid = leagueid
         self.oauth = initialize_oauth()
     
     def getgameid(self, game='mlb'):
@@ -41,11 +42,12 @@ class YahooRoster:
             raise e
         return team_list
 
-    def updateroster(self, leagueid):
+    def updateroster(self):
         oauth = self.oauth
         gameid = self.getgameid()
         logger.info(f"Game ID: {gameid}")
-        team_list = self._get_team_keys(leagueid)
+
+        team_list = self._get_team_keys(self.leagueid)
 
         self.createfolder()
         with open('./teams/roster.txt', 'w+', newline = '') as outfile:        
