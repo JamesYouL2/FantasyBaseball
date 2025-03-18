@@ -1,9 +1,7 @@
-import pandas as pd
 from yahoo_oauth import OAuth2
-import logging
 import json
-from json import dumps
-import datetime
+import os
+from loguru import logger
 
 class Yahoo_Api():
     def __init__(self,
@@ -12,7 +10,6 @@ class Yahoo_Api():
                 ):
         self._consumer_key = consumer_key
         self._consumer_secret = consumer_secret
-        #self._access_token = access_token
         self._authorization = None
         
     def _login(self):
@@ -28,10 +25,8 @@ class Authorize():
         url = 'https://fantasysports.yahooapis.com/fantasy/v2/league/380.l.XXXXXX/transactions'
         response = oauth.session.get(url, params={'format': 'json'})
         r = response.json()
-        #with open('YahooGameInfo.json', 'w') as outfile:
-            #json.dump(r, outfile)
-            #return;
-
+        logger.info(r)
+        
 class Bot():
     def __init__(self, yahoo_api):
         self._yahoo_api = yahoo_api
@@ -39,20 +34,20 @@ class Bot():
         # Data Updates
         at = Authorize()
         at.AuthorizeLeague()
-        print('Authorization Complete')
+        logger.info('Authorization Complete')
 
-def main():
-##### Get Yahoo Auth ####
-    # Yahoo Keys
+def get_token():
     with open('./auth/oauth2yahoo.json') as json_yahoo_file:
         auths = json.load(json_yahoo_file)
     yahoo_consumer_key = auths['consumer_key']
     yahoo_consumer_secret = auths['consumer_secret']
     json_yahoo_file.close()
-    #### Declare Yahoo Variable ####
+    return yahoo_consumer_key, yahoo_consumer_secret
+
+def main():
+    yahoo_consumer_key, yahoo_consumer_secret = get_token()
     global yahoo_api
     yahoo_api = Yahoo_Api(yahoo_consumer_key, yahoo_consumer_secret,)
-#### Where the magic happen ####
     bot = Bot(yahoo_api)
     bot.run()
 
