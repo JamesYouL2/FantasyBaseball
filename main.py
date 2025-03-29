@@ -8,6 +8,6 @@ LEAGUE_ID = 33235
 
 config = configparser.ConfigParser()
 
-YahooRoster(leagueid=LEAGUE_ID)
+YahooRoster(leagueid=LEAGUE_ID).updateroster()
 
 exportrankings(ros=True)

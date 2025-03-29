@@ -75,7 +75,7 @@ class YahooRoster:
                     logger.error(f"Error in Data: {data}")
                     raise e
 
-    def createfolder():
+    def createfolder(self):
         path = "teams"
         # Check whether the specified path exists or not
         isExist = os.path.exists(path)
