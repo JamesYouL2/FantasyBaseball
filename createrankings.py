@@ -106,8 +106,9 @@ def exportrankings(ros=True):
 
     finalmerge['YAHOOID_int']=finalmerge['YAHOOID'].fillna(0).apply(int)
     logger.info(finalmerge.dtypes)
-    finalmerge.drop_duplicates(subset=['Name', 'AB'],inplace=True)
+    finalmerge.drop_duplicates(subset=['ShortName', 'AB'],inplace=True)
 
+    #Shohei Ohtani handling
     finalmerge.loc[(finalmerge.YAHOOID_int == 10835) & (finalmerge.PA > 0),'YAHOOID_int'] = 1000001
     finalmerge.loc[(finalmerge.YAHOOID_int == 10835) & (finalmerge.PA.isnull()),'YAHOOID_int'] = 1000002
 
