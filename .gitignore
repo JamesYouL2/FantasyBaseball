@@ -15,3 +15,6 @@ leagueid.ini
 *.crdownload
 *.DS_Store
 .vscode/*
+
+#Add back player map
+!SFBB Player ID Map*

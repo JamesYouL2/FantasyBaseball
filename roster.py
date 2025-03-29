@@ -9,12 +9,12 @@ import csv
 import os
 from loguru import logger
 from yahoo_oauth import OAuth2
-from league_authorization import initialize_oauth
+from league_authorization import initialize_oauth_file
 
 class YahooRoster:
     def __init__(self, leagueid):
         self.leagueid = leagueid
-        self.oauth = initialize_oauth()
+        self.oauth = initialize_oauth_file()
     
     def getgameid(self, game='mlb'):
         oauth = self.oauth
