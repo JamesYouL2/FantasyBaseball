@@ -83,7 +83,7 @@ def exportrankings(ros=True):
     pitchersmean['ERA']=((525.55+pitchersmean['ER'])*9/(1350.0+pitchersmean['IP'])-3.5)/-0.106
     pitchersmean['WHIP'] =((1620.0+pitchersmean['H']+pitchersmean['BB'])/(1350.0+pitchersmean['IP'])-1.2)/-0.02
     pitchersmean['KBB'] = (((55*9+pitchersmean['SO'])/(55*3+pitchersmean['BB']))-3)/0.09
-    pitchersmean['value'] = pitchersmean['KBB']+pitchersmean['ERA']+pitchersmean['WHIP']+(pitchersmean['K']/50.0+(pitchersmean['SV']+pitchersmean['HLD'])/10.0)
+    pitchersmean['value'] = pitchersmean['KBB']+pitchersmean['ERA']+pitchersmean['WHIP']+(pitchersmean['SO']/50.0+(pitchersmean['SV']+pitchersmean['HLD'])/10.0)
     ########################
 
     pitchersmean['utilrank']=pitchersmean['value'].rank(ascending=False)
