@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import pybaseball
-
+from loguru import logger
 
 def GetPosition (array):
     if isinstance(array,np.ndarray):
@@ -105,6 +105,7 @@ def exportrankings(ros=True):
     roster = pd.read_csv("./teams/roster.txt",sep='\t')
 
     finalmerge['YAHOOID_int']=finalmerge['YAHOOID'].fillna(0).apply(int)
+    logger.info(finalmerge.dtypes)
     finalmerge.drop_duplicates(subset=['Name', 'AB'],inplace=True)
 
     finalmerge.loc[(finalmerge.YAHOOID_int == 10835) & (finalmerge.PA > 0),'YAHOOID_int'] = 1000001
