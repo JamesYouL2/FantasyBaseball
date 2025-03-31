@@ -30,8 +30,8 @@ def exportrankings(ros=True):
         hittersmean = pd.read_json('https://www.fangraphs.com/api/projections?stats=bat&type=atc')
         pitchersmean = pd.read_json('https://www.fangraphs.com/api/projections?stats=pit&type=atc')
 
-    positionsold = pybaseball.fielding_stats(2023, qual=0)
-    positions = pybaseball.fielding_stats(2024, qual=0)
+    positionsold = pybaseball.fielding_stats(2024, qual=0)
+    positions = pybaseball.fielding_stats(2025, qual=0)
     playeridmap = pd.read_csv("SFBB Player ID Map - PLAYERIDMAP.csv")
     ##From Smart Fantasy Baseball
 
@@ -106,7 +106,7 @@ def exportrankings(ros=True):
 
     finalmerge['YAHOOID_int']=finalmerge['YAHOOID'].fillna(0).apply(int)
     logger.info(finalmerge.dtypes)
-    finalmerge.drop_duplicates(subset=['ShortName', 'AB'],inplace=True)
+    finalmerge.drop_duplicates(subset=['PlayerName', 'AB'],inplace=True)
 
     #Shohei Ohtani handling
     finalmerge.loc[(finalmerge.YAHOOID_int == 10835) & (finalmerge.PA > 0),'YAHOOID_int'] = 1000001
@@ -117,4 +117,4 @@ def exportrankings(ros=True):
     #format player names
     finalexport['PlayerName']=finalexport['PlayerName'].str.normalize('NFKD').str.encode('ascii', errors='ignore').str.decode('utf-8')
 
-    finalexport[['PlayerName','Team','value','VORP','BestPos','team','G','GS','W','SV','percent_owned']].sort_values('VORP', ascending=False).nlargest(500,['VORP']).to_csv("rankings.tab", sep='\t')
+    finalexport[['PlayerName','Team','value','VORP','BestPos','team','G','GS','W','SV','percent_owned']].sort_values('VORP', ascending=False).nlargest(500,['VORP']).to_csv("rankings.csv")
