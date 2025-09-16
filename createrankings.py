@@ -86,10 +86,14 @@ def exportrankings(ros=True):
     pitchersmean['value'] = pitchersmean['KBB']+pitchersmean['ERA']+pitchersmean['WHIP']+(pitchersmean['SO']/50.0)+(pitchersmean['SV']+pitchersmean['HLD'])/10.0
     ########################
 
-    pitchersmean['utilrank']=pitchersmean['value'].rank(ascending=False)
+    pitchersmean['utilrank']=pitchersmean['value'].rank(ascending=False, method='first')
 
     ###customized league replacement value
-    pitchersmean['ReplacementValue']=float(pitchersmean.loc[pitchersmean['utilrank']==110]['value'])
+    try:
+        pitchersmean['ReplacementValue']=float(pitchersmean.loc[pitchersmean['utilrank']==110]['value'])
+    except Exception as e:
+        print(pitchersmean['utilrank'])
+        raise e
 
     pitchersmean['VORP']=pitchersmean['value']-pitchersmean['ReplacementValue']
     pitchersmean['playerid']=pitchersmean['playerids']
