@@ -9,6 +9,6 @@ dependencies = [
     "loguru==0.7.3",
     "numpy==2.2.4",
     "pandas==2.2.3",
-    "pybaseball @ git+https://github.com/jldbc/pybaseball.git@main",
+    "pybaseball @ git+https://github.com/jldbc/pybaseball.git@master",
     "yahoo-oauth==2.1.1",
 ]
