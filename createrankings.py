@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import pybaseball
 from loguru import logger
+import requests
 
 def GetPosition (array):
     if isinstance(array,np.ndarray):
@@ -22,6 +23,27 @@ def GetPosition (array):
     else:
         return '1B'
 
+def fg_fielding_leaders(season: int = 2025, qual: int = 0) -> pd.DataFrame:
+    url = "https://www.fangraphs.com/api/leaders/major-league/data"
+    params = {
+        "pos": "all",
+        "stats": "fld",
+        "lg": "all",
+        "qual": qual,
+        "type": "1",
+        "season": season,
+        "season1": season,
+        "ind": "0",
+        "month": "0",
+        "team": "0",
+        "rost": "0",
+        "age": "",
+        "pageitems": "500000",
+    }
+    resp = requests.get(url, params=params)
+    resp.raise_for_status()
+    return pd.DataFrame(resp.json()["data"])
+
 def exportrankings(ros=True):
     if ros:
         hittersmean = pd.read_json('https://www.fangraphs.com/api/projections?stats=bat&type=ratcdc')
@@ -30,8 +52,8 @@ def exportrankings(ros=True):
         hittersmean = pd.read_json('https://www.fangraphs.com/api/projections?stats=bat&type=atc')
         pitchersmean = pd.read_json('https://www.fangraphs.com/api/projections?stats=pit&type=atc')
 
-    positionsold = pybaseball.fielding_stats(2025, qual=0)
-    positions = pybaseball.fielding_stats(2026, qual=0)
+    positionsold = fg_fielding_leaders(2025, qual=0)
+    positions = fg_fielding_leaders(2026, qual=0)
     playeridmap = pd.read_csv("SFBB Player ID Map - PLAYERIDMAP.csv")
     ##From Smart Fantasy Baseball
 
@@ -45,8 +67,8 @@ def exportrankings(ros=True):
     positions['Pos']=positions['Pos'].replace(['LF','CF','RF'],'OF')
     positionsold['Pos']=positionsold['Pos'].replace(['LF','CF','RF'],'OF')
 
-    positions_unique=positions.loc[(positions['G']>=10) | (positions['GS']>=5)].groupby('IDfg')['Pos'].unique()
-    positions_oldunique=positionsold.loc[(positionsold['G']>=10) | (positionsold['GS']>=5)].groupby('IDfg')['Pos'].unique()
+    positions_unique=positions.loc[(positions['G']>=10) | (positions['GS']>=5)].groupby('playerid')['Pos'].unique()
+    positions_oldunique=positionsold.loc[(positionsold['G']>=10) | (positionsold['GS']>=5)].groupby('playerid')['Pos'].unique()
 
     positionjoin = dict()
     positionjoin.update(positions_unique)
