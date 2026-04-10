@@ -4,7 +4,7 @@ from createrankings import exportrankings
 import configparser
 
 # Adjust this to your league ID
-LEAGUE_ID = 33235
+LEAGUE_ID = 65471
 
 config = configparser.ConfigParser()
 

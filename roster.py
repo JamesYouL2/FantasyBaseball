@@ -8,7 +8,6 @@ Created on Mon Apr  1 11:56:27 2019
 import csv
 import os
 from loguru import logger
-from yahoo_oauth import OAuth2
 from league_authorization import initialize_oauth_file
 
 class YahooRoster:
