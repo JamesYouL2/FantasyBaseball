@@ -30,8 +30,8 @@ def exportrankings(ros=True):
         hittersmean = pd.read_json('https://www.fangraphs.com/api/projections?stats=bat&type=atc')
         pitchersmean = pd.read_json('https://www.fangraphs.com/api/projections?stats=pit&type=atc')
 
-    positionsold = pybaseball.fielding_stats(2024, qual=0)
-    positions = pybaseball.fielding_stats(2025, qual=0)
+    positionsold = pybaseball.fielding_stats(2025, qual=0)
+    positions = pybaseball.fielding_stats(2026, qual=0)
     playeridmap = pd.read_csv("SFBB Player ID Map - PLAYERIDMAP.csv")
     ##From Smart Fantasy Baseball
 
@@ -69,7 +69,7 @@ def exportrankings(ros=True):
 
     ###customized league replacement value
     replacementvalue=hittersmerge.groupby('BestPos').value.nlargest(10).groupby('BestPos').min().reset_index(name='PosValue')
-    replacementvalue['UtilValue']=float(hittersmerge.loc[hittersmerge['utilrank']==80]['value'])
+    replacementvalue['UtilValue']=float(hittersmerge.loc[hittersmerge['utilrank']==70]['value'])
 
     replacementvalue['ReplacementValue']=pd.DataFrame([replacementvalue['UtilValue'], replacementvalue['PosValue']]).min()
 
@@ -83,14 +83,14 @@ def exportrankings(ros=True):
     pitchersmean['ERA']=((525.55+pitchersmean['ER'])*9/(1350.0+pitchersmean['IP'])-3.5)/-0.106
     pitchersmean['WHIP'] =((1620.0+pitchersmean['H']+pitchersmean['BB'])/(1350.0+pitchersmean['IP'])-1.2)/-0.02
     pitchersmean['KBB'] = (((55*9+pitchersmean['SO'])/(55*3+pitchersmean['BB']))-3)/0.09
-    pitchersmean['value'] = pitchersmean['KBB']+pitchersmean['ERA']+pitchersmean['WHIP']+(pitchersmean['SO']/50.0)+(pitchersmean['SV']+pitchersmean['HLD'])/10.0
+    pitchersmean['value'] = (pitchersmean['W']/8.0)+pitchersmean['ERA']+pitchersmean['WHIP']+(pitchersmean['SO']/50.0)+(pitchersmean['SV']+pitchersmean['HLD'])/10.0
     ########################
 
     pitchersmean['utilrank']=pitchersmean['value'].rank(ascending=False, method='first')
 
     ###customized league replacement value
     try:
-        pitchersmean['ReplacementValue']=float(pitchersmean.loc[pitchersmean['utilrank']==110]['value'])
+        pitchersmean['ReplacementValue']=float(pitchersmean.loc[pitchersmean['utilrank']==90]['value'])
     except Exception as e:
         print(pitchersmean['utilrank'])
         raise e
