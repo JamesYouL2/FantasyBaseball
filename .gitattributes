@@ -1,2 +1,7 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Strip notebook outputs on the way into git. The working copy keeps them.
+# Requires: git config filter.nbstrip.clean "python3 scripts/nbstrip.py"
+# (see README; .githooks/pre-commit blocks outputs if the filter is missing)
+*.ipynb filter=nbstrip

@@ -7,14 +7,25 @@
 *.tab
 teams/roster.txt
 
+#Add back player map
+!SFBB Player ID Map*
+
 #config files
-auth/oauth2yahoo.json
-leagueid.ini
+#deny everything in auth/ so a renamed or backup credential file cannot slip through
+auth/*
+!auth/example.json
+*.ini
+!example.ini
+.env
+.env.*
+*.pem
+*.key
+
+#notebook scratch
+.ipynb_checkpoints/
+**/.ipynb_checkpoints/
 
 #system files
 *.crdownload
 *.DS_Store
 .vscode/*
-
-#Add back player map
-!SFBB Player ID Map*

@@ -1,0 +1,60 @@
+#!/bin/sh
+# Blocks credentials and league data from being committed.
+# Enable once per clone:  git config core.hooksPath .githooks
+#
+# Bypass deliberately with:  git commit --no-verify
+
+fail=0
+staged=$(git diff --cached --name-only --diff-filter=ACM)
+[ -z "$staged" ] && exit 0
+
+# 1. Files that must never be tracked, whatever they are named.
+for f in $staged; do
+    case "$f" in
+        # Source and docs are reviewed by the content checks below, not by name.
+        auth/example.json|*.py|*.md|*.txt|*.toml|*.sh|.githooks/*) continue ;;
+    esac
+    case "$f" in
+        auth/*|*.env|.env*|*oauth2*|*secret*|*credential*|*.pem|*.key)
+            echo "BLOCKED: $f looks like a credential file."
+            fail=1 ;;
+        teams/*|*.tab)
+            echo "BLOCKED: $f contains league roster data."
+            fail=1 ;;
+    esac
+done
+
+# 2. Real values sitting where a placeholder belongs.
+#    Yahoo consumer keys start with dj0y; secrets are 40-char hex.
+if git diff --cached -U0 -- . ':!uv.lock' ':!*.lock' \
+    | grep -nE '^\+' \
+    | grep -qE 'dj0y[A-Za-z0-9]{10,}|"consumer_secret"[[:space:]]*:[[:space:]]*"[a-f0-9]{20,}"|"(access|refresh)_token"[[:space:]]*:[[:space:]]*"[^"]{10,}"'; then
+    echo "BLOCKED: staged changes contain what looks like a real Yahoo key or token."
+    fail=1
+fi
+
+# 3. A configured league id (the example file must stay empty).
+if git diff --cached -U0 -- '*.ini' | grep -qE '^\+leagueid[[:space:]]*=[[:space:]]*[0-9]+'; then
+    echo "BLOCKED: a real league id is staged. Keep leagueid.ini untracked."
+    fail=1
+fi
+
+# 4. Notebook outputs embed local paths and scraped data.
+#    This reads the staged blob, so it passes when the nbstrip clean filter has
+#    done its job and catches the case where the filter was never configured.
+for f in $staged; do
+    case "$f" in
+        *.ipynb)
+            if git show ":$f" | grep -qE '"output_type"|"execution_count": [0-9]'; then
+                echo "BLOCKED: $f would be committed with cell outputs."
+                echo "  The nbstrip filter is not active. Enable it with:"
+                echo "    git config filter.nbstrip.clean \"python3 scripts/nbstrip.py\""
+                echo "  then re-stage: git add --renormalize $f"
+                echo "  Or strip in place: python3 scripts/nbstrip.py --inplace $f"
+                fail=1
+            fi ;;
+    esac
+done
+
+[ "$fail" -eq 1 ] && echo "" && echo "Commit aborted by .githooks/pre-commit."
+exit $fail

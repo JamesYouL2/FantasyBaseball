@@ -9,12 +9,13 @@ import csv
 import os
 from loguru import logger
 from league_authorization import initialize_oauth_file
+from credentials import shape
 
 class YahooRoster:
     def __init__(self, leagueid):
         self.leagueid = leagueid
         self.oauth = initialize_oauth_file()
-    
+
     def getgameid(self, game='mlb'):
         oauth = self.oauth
         url = 'https://fantasysports.yahooapis.com/fantasy/v2/game/' + game
@@ -33,11 +34,11 @@ class YahooRoster:
             for i in data['fantasy_content']['league'][1]['standings'][0]['teams']:
                 if i == 'count':
                     continue
-                team_key=data['fantasy_content']['league'][1]['standings'][0]['teams'][f"{str(i)}"]['team'][0][0]['team_key']    
+                team_key=data['fantasy_content']['league'][1]['standings'][0]['teams'][f"{str(i)}"]['team'][0][0]['team_key']
                 team_list.append(team_key)
         except Exception as e:
-            logger.error(f"Error in url: {url}")
-            logger.error(f"Error in Data: {data}")
+            logger.error("Could not read standings for the configured league")
+            logger.error(f"Response shape: {shape(data)}")
             raise e
         return team_list
 
@@ -49,7 +50,7 @@ class YahooRoster:
         team_list = self._get_team_keys(self.leagueid)
 
         self.createfolder()
-        with open('./teams/roster.txt', 'w+', newline = '') as outfile:        
+        with open('./teams/roster.txt', 'w+', newline = '') as outfile:
             csvwriter = csv.writer(outfile, delimiter='\t')
             outfile.truncate()
             csvwriter.writerow(['playerid','player_name','team','percent_owned'])
@@ -64,14 +65,15 @@ class YahooRoster:
                             try:
                                 percentowned = data["fantasy_content"]["team"][1]["players"][str(playercount)]["player"][1]['percent_owned'][1]['value']
                             except:
-                                logger.warning(item)
+                                logger.warning(f"No percent_owned for entry {shape(item)}")
                             finally:
                                     row = [data["fantasy_content"]["team"][1]["players"][str(playercount)]["player"][0][1]["player_id"],data["fantasy_content"]["team"][1]["players"][str(playercount)]["player"][0][2]["name"]["full"],data["fantasy_content"]["team"][0][2]["name"],percentowned]
                                     #print(row)
                                     csvwriter.writerow(row)
                                     playercount = playercount + 1
                 except KeyError as e:
-                    logger.error(f"Error in Data: {data}")
+                    logger.error("Could not read the roster for a team")
+                    logger.error(f"Response shape: {shape(data)}")
                     raise e
 
     def createfolder(self):
