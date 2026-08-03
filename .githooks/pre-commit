@@ -9,17 +9,33 @@ staged=$(git diff --cached --name-only --diff-filter=ACM)
 [ -z "$staged" ] && exit 0
 
 # 1. Files that must never be tracked, whatever they are named.
+#    Ordered deliberately: allowlist, then data, then credentials. The source
+#    exemption applies ONLY to the credential name check, so that a file like
+#    teams/roster.txt cannot slip through on its extension. Nothing here
+#    exempts a file from the content checks in rules 2-4 below.
 for f in $staged; do
+    # Placeholders and templates that exist in order to be tracked.
     case "$f" in
-        # Source and docs are reviewed by the content checks below, not by name.
-        auth/example.json|*.py|*.md|*.txt|*.toml|*.sh|.githooks/*) continue ;;
+        auth/example.json|example.ini|.gitkeep|*/.gitkeep) continue ;;
     esac
+
+    # Scraped league data.
+    case "$f" in
+        teams/*|*.tab)
+            echo "BLOCKED: $f contains league roster data."
+            fail=1
+            continue ;;
+    esac
+
+    # Source and docs are judged by content, not by name, so that a module
+    # legitimately called credentials.py or config.py stays committable.
+    case "$f" in
+        *.py|*.md|*.toml|*.sh|.githooks/*|scripts/*) continue ;;
+    esac
+
     case "$f" in
         auth/*|*.env|.env*|*oauth2*|*secret*|*credential*|*.pem|*.key)
             echo "BLOCKED: $f looks like a credential file."
-            fail=1 ;;
-        teams/*|*.tab)
-            echo "BLOCKED: $f contains league roster data."
             fail=1 ;;
     esac
 done
