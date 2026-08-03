@@ -39,6 +39,16 @@ if git diff --cached -U0 -- '*.ini' | grep -qE '^\+leagueid[[:space:]]*=[[:space
     fail=1
 fi
 
+# 3b. ...or hardcoded back into source. It belongs in $YAHOO_LEAGUE_ID or leagueid.ini.
+#     Anchored to an assignment at the start of a line so that documentation
+#     examples ("export YAHOO_LEAGUE_ID=123456") do not trip it.
+if git diff --cached -U0 -- '*.py' '*.ipynb' \
+    | grep -qiE '^\+[[:space:]]*[a-z_]*league_?id[[:space:]]*=[[:space:]]*[0-9]{3,}'; then
+    echo "BLOCKED: a league id is hardcoded in source."
+    echo "  Use \$YAHOO_LEAGUE_ID or leagueid.ini instead (see config.league_id)."
+    fail=1
+fi
+
 # 4. Notebook outputs embed local paths and scraped data.
 #    This reads the staged blob, so it passes when the nbstrip clean filter has
 #    done its job and catches the case where the filter was never configured.

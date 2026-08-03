@@ -1,7 +1,7 @@
 [project]
 name = "fantasybaseball"
 version = "0.1.0"
-description = "Add your description here"
+description = "Sync fangraphs depth chart projections with a Yahoo fantasy baseball league"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -10,5 +10,6 @@ dependencies = [
     "numpy==2.2.4",
     "pandas==2.2.3",
     "pybaseball",
+    "requests==2.32.3",
     "yahoo-oauth==2.1.1",
 ]

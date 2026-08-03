@@ -2,11 +2,59 @@
 
 This project is designed to update a spreadsheet every day with the depth chart projections from fangraphs and sync it with a yahoo fantasy baseball league.
 
-To run it, you need to copy example.json in the auth folder to oauth2yahoo.json and add a consumer key and consumer secret. See "Keeping credentials out of the repo" below before you do.
+## Running it
 
-I actually put a requirements.txt which I think works now.
+Dependencies are managed with [uv](https://docs.astral.sh/uv/). `pyproject.toml`
+is the dependency list and `uv.lock` pins the exact resolved versions, so a
+checkout reproduces the same environment. There is no requirements.txt.
 
-Set your league id in `LEAGUE_ID` at the top of main.py.
+```
+uv sync          # create .venv from the lockfile
+uv run main.py   # run against that environment
+```
+
+`uv sync` reads `.python-version` (3.12) and fetches that interpreter if you do
+not have it, so there is nothing to install first beyond uv itself.
+
+To change a dependency, edit `pyproject.toml` and re-lock:
+
+```
+uv add <package>     # or edit pyproject.toml by hand, then:
+uv lock              # regenerate uv.lock
+```
+
+Commit `pyproject.toml` and `uv.lock` together — a lockfile that disagrees with
+`pyproject.toml` makes `uv sync --locked` fail.
+
+## Configuration
+
+`config.py` is the only place that reads configuration. It draws on two files,
+both gitignored, and each one can be replaced by an environment variable:
+
+| What | File | Environment variable |
+| --- | --- | --- |
+| Consumer key, secret, tokens | `auth/oauth2yahoo.json` | `YAHOO_OAUTH_FILE` (path) |
+| League id | `leagueid.ini` | `YAHOO_LEAGUE_ID` (value) |
+
+They stay separate because `yahoo_oauth` owns the JSON file: it rewrites it in
+place every time the access token is refreshed, so its format and location are
+the library's to decide, not ours.
+
+To set up:
+
+```
+cp auth/example.json auth/oauth2yahoo.json    # then add your key and secret
+cp example.ini leagueid.ini                   # then fill in leagueid=
+```
+
+Or skip both files entirely:
+
+```
+export YAHOO_OAUTH_FILE=~/.config/fantasybaseball/oauth2yahoo.json
+export YAHOO_LEAGUE_ID=123456
+```
+
+See "Keeping credentials out of the repo" below before you start.
 
 ## Keeping credentials out of the repo
 
@@ -23,8 +71,9 @@ Both are local config and do not travel with a clone, so run them again on any
 new machine.
 
 The hook refuses any commit that stages a credential file, a real Yahoo key or
-token, a configured league id, league roster data, or a notebook with saved cell
-outputs. Bypass it deliberately with `git commit --no-verify`.
+token, a league id (in a config file or hardcoded in source), league roster
+data, or a notebook with saved cell outputs. Bypass it deliberately with
+`git commit --no-verify`.
 
 The `nbstrip` filter clears notebook outputs on the way into git, so your
 working copy keeps its outputs while the committed blob never has them. Outputs

@@ -9,7 +9,7 @@ import csv
 import os
 from loguru import logger
 from league_authorization import initialize_oauth_file
-from credentials import shape
+from config import shape
 
 class YahooRoster:
     def __init__(self, leagueid):
