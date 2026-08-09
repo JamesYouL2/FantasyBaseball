@@ -196,6 +196,47 @@ def test_missing_tokens_exit_rather_than_prompt(store):
     assert 'auth.py' in str(raised.value)
 
 
+def test_missing_tokens_with_credentials_point_at_auth(store):
+    """Credentials in hand means only the browser trip is missing."""
+    with pytest.raises(SystemExit) as raised:
+        config.read_tokens()
+
+    message = str(raised.value)
+    assert 'auth.py' in message
+    assert 'init.py' not in message, "would make them re-enter a secret they have"
+
+
+def test_missing_everything_points_at_init(store, monkeypatch):
+    """A fresh checkout must not be sent to auth.py, which would fail again."""
+    monkeypatch.delenv('YAHOO_CONSUMER_KEY')
+    monkeypatch.delenv('YAHOO_CONSUMER_SECRET')
+
+    with pytest.raises(SystemExit) as raised:
+        config.read_tokens()
+
+    assert 'init.py' in str(raised.value)
+
+
+def test_missing_credentials_point_at_init(store, monkeypatch):
+    monkeypatch.delenv('YAHOO_CONSUMER_KEY')
+    monkeypatch.delenv('YAHOO_CONSUMER_SECRET')
+
+    with pytest.raises(SystemExit) as raised:
+        config.client_credentials()
+
+    assert 'init.py' in str(raised.value)
+
+
+def test_missing_league_id_points_at_init(store, monkeypatch, tmp_path):
+    monkeypatch.delenv('YAHOO_LEAGUE_ID', raising=False)
+    monkeypatch.chdir(tmp_path)          # no leagueid.ini here
+
+    with pytest.raises(SystemExit) as raised:
+        config.league_id()
+
+    assert 'init.py' in str(raised.value)
+
+
 def test_missing_credentials_name_what_to_set(store, monkeypatch):
     monkeypatch.delenv('YAHOO_CONSUMER_KEY')
     monkeypatch.delenv('YAHOO_CONSUMER_SECRET')

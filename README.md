@@ -10,6 +10,7 @@ checkout reproduces the same environment. There is no requirements.txt.
 
 ```
 uv sync          # create .venv from the lockfile
+uv run init.py   # first time only: credentials, league id, authorization
 uv run main.py   # run against that environment
 ```
 
@@ -43,7 +44,18 @@ that cannot be thrown away: delete it and `uv run auth.py` mints another. The
 credential file is written once by `init.py` and only read from then on, so
 nothing that runs daily can damage it. All of them are gitignored.
 
-To set up:
+First you need a Yahoo app, which is where the consumer key and secret come
+from. Create one at [developer.yahoo.com/apps/create](https://developer.yahoo.com/apps/create/)
+with Fantasy Sports read permission, and set its redirect URI to
+
+```
+http://localhost:8731/callback
+```
+
+If Yahoo will not accept that, see "Authorizing" below — any registered
+redirect URI works, it just changes how the code gets back to you.
+
+Then:
 
 ```
 uv run init.py

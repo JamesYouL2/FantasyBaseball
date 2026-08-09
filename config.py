@@ -88,9 +88,31 @@ def client_credentials():
         return key, secret
 
     raise SystemExit(
-        f"No Yahoo consumer key and secret. Either export "
-        f"YAHOO_CONSUMER_KEY and YAHOO_CONSUMER_SECRET, or copy "
+        f"No Yahoo consumer key and secret. Set up with:\n"
+        f"  uv run init.py\n"
+        f"Or export YAHOO_CONSUMER_KEY and YAHOO_CONSUMER_SECRET, or copy "
         f"auth/example.json to {path} and fill them in.")
+
+
+def have_credentials():
+    """Whether a key and secret can be found, without failing if they cannot."""
+    try:
+        client_credentials()
+        return True
+    except SystemExit:
+        return False
+
+
+def setup_command():
+    """The command that fixes a missing setup, given how much is already done.
+
+    Someone holding a key and secret only needs the browser trip. Someone
+    holding neither needs to enter them first, and sending them to auth.py
+    would just produce a second and more confusing error.
+    """
+    if have_credentials():
+        return "Authorize once with:\n  uv run auth.py"
+    return "Set up with:\n  uv run init.py"
 
 
 # --- Tokens -----------------------------------------------------------------
@@ -113,9 +135,7 @@ def read_tokens():
         # already dead and the first call refreshes.
         return {'refresh_token': inherited, 'expires_at': 0}
 
-    raise SystemExit(
-        f"No Yahoo tokens at {token_file()}. Authorize once with:\n"
-        f"  uv run auth.py")
+    raise SystemExit(f"No Yahoo tokens at {token_file()}. {setup_command()}")
 
 
 def read_tokens_if_any():
@@ -194,9 +214,10 @@ def league_id():
     from_file = parser.get('DEFAULT', 'leagueid', fallback='').strip()
     if not from_file:
         raise SystemExit(
-            f"No league id configured. Either set YAHOO_LEAGUE_ID, or "
-            f"copy example.ini to {LEAGUE_ID_FILE} and fill in leagueid. "
-            f"Both stay out of git.")
+            f"No league id configured. Set up with:\n"
+            f"  uv run init.py\n"
+            f"Or set YAHOO_LEAGUE_ID, or copy example.ini to "
+            f"{LEAGUE_ID_FILE} and fill in leagueid. Both stay out of git.")
     return from_file
 
 
