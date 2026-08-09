@@ -291,6 +291,135 @@ def test_junk_paste_is_rejected(pasted):
         auth.code_from(pasted)
 
 
+# --- auth.py: naming Yahoo's rejection --------------------------------------
+
+class Redirected:
+    """A 302 to Yahoo's error page, the shape a refused request comes back as."""
+
+    def __init__(self, location):
+        self.headers = {'Location': location}
+
+
+def test_preflight_reads_the_description_out_of_yahoos_error_redirect(monkeypatch):
+    """The browser shows only "something went wrong"; this is the same answer."""
+    monkeypatch.setattr(auth.requests, 'get', lambda *a, **k: Redirected(
+        'https://api.login.yahoo.com/oauth2/error?client_id=x'
+        '&error=invalid_request&error_description=invalid+redirect+uri'))
+
+    assert auth.preflight('https://example.invalid') == 'invalid redirect uri'
+
+
+def test_preflight_is_silent_when_yahoo_is_happy(monkeypatch):
+    monkeypatch.setattr(auth.requests, 'get', lambda *a, **k: Redirected(
+        'https://login.yahoo.com?src=oauth&client_id=x'))
+    assert auth.preflight('https://example.invalid') is None
+
+
+def test_preflight_stays_out_of_the_way_when_offline(monkeypatch):
+    def refuse(*args, **kwargs):
+        raise requests.ConnectionError('no route')
+
+    monkeypatch.setattr(auth.requests, 'get', refuse)
+    assert auth.preflight('https://example.invalid') is None
+
+
+def test_rejected_redirect_offers_oob_and_remembers_it(store, monkeypatch, capsys):
+    """The fix should stick, rather than needing an env var every run."""
+    monkeypatch.setattr(auth, 'preflight',
+                        lambda url: None if 'oob' in url else 'invalid redirect uri')
+    monkeypatch.setattr('builtins.input', lambda *a: 'y')
+
+    chosen = auth.resolve('invalid redirect uri', 'KEY',
+                          'http://localhost:8731/callback', 'STATE')
+
+    assert chosen == auth.OOB_REDIRECT
+    assert config.redirect_uri() == auth.OOB_REDIRECT, "did not persist the choice"
+    assert 'invalid redirect uri' in capsys.readouterr().out
+
+
+def test_declining_oob_says_where_to_fix_the_app(store, monkeypatch):
+    monkeypatch.setattr(auth, 'preflight',
+                        lambda url: None if 'oob' in url else 'invalid redirect uri')
+    monkeypatch.setattr('builtins.input', lambda *a: 'n')
+
+    with pytest.raises(SystemExit) as raised:
+        auth.resolve('invalid redirect uri', 'KEY',
+                     'http://localhost:8731/callback', 'STATE')
+
+    assert 'developer.yahoo.com' in str(raised.value)
+
+
+def test_a_complaint_that_is_not_about_the_redirect_is_not_papered_over(store):
+    with pytest.raises(SystemExit) as raised:
+        auth.resolve('invalid client id', 'KEY', 'oob', 'STATE')
+
+    message = str(raised.value)
+    assert 'consumer key' in message
+    assert auth.OOB_REDIRECT not in config.credentials_file(), "should not have saved"
+
+
+def test_saved_redirect_uri_is_used_but_env_still_wins(store, monkeypatch):
+    config.write_credentials('K', 'S')
+    config.save_redirect_uri('oob')
+    assert config.redirect_uri() == 'oob'
+
+    monkeypatch.setenv('YAHOO_REDIRECT_URI', 'https://example.com/cb')
+    assert config.redirect_uri() == 'https://example.com/cb'
+
+
+def test_saving_a_redirect_uri_keeps_the_credentials_beside_it(store, monkeypatch):
+    # The env vars would satisfy client_credentials() without ever reading the
+    # file, which is the thing under test here.
+    monkeypatch.delenv('YAHOO_CONSUMER_KEY')
+    monkeypatch.delenv('YAHOO_CONSUMER_SECRET')
+    config.write_credentials('K', 'S')
+
+    config.save_redirect_uri('oob')
+
+    assert config.client_credentials() == ('K', 'S'), "clobbered the credentials"
+    assert stat.S_IMODE(os.stat(config.credentials_file()).st_mode) == 0o600
+
+
+# --- auth.py: opening a browser ---------------------------------------------
+
+def test_wsl_uses_interop_rather_than_webbrowser(monkeypatch):
+    """webbrowser picks 'gio' in WSL, which has no desktop to open anything."""
+    monkeypatch.setattr(auth, '_is_wsl', lambda: True)
+    monkeypatch.setattr(auth.webbrowser, 'open',
+                        lambda url: pytest.fail("used webbrowser inside WSL"))
+    attempted = []
+    monkeypatch.setattr(auth.subprocess, 'run',
+                        lambda cmd, **kw: attempted.append(cmd[0]))
+
+    assert auth.open_browser('https://example.invalid') is True
+    assert attempted == ['wslview']
+
+
+def test_wsl_falls_through_to_powershell_when_wslview_is_absent(monkeypatch):
+    monkeypatch.setattr(auth, '_is_wsl', lambda: True)
+    attempted = []
+
+    def run(cmd, **kwargs):
+        attempted.append(cmd[0])
+        if cmd[0] == 'wslview':
+            raise FileNotFoundError(cmd[0])
+
+    monkeypatch.setattr(auth.subprocess, 'run', run)
+
+    assert auth.open_browser('https://example.invalid') is True
+    assert attempted == ['wslview', 'powershell.exe']
+
+
+def test_a_browser_that_cannot_open_is_reported_not_raised(monkeypatch):
+    monkeypatch.setattr(auth, '_is_wsl', lambda: False)
+
+    def refuse(url):
+        raise auth.webbrowser.Error('no browser')
+
+    monkeypatch.setattr(auth.webbrowser, 'open', refuse)
+    assert auth.open_browser('https://example.invalid') is False
+
+
 # --- auth.py: the redirect server, over a real socket -----------------------
 
 @pytest.fixture

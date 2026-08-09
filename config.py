@@ -64,11 +64,23 @@ def redirect_uri():
     """Where Yahoo sends the authorization code back to.
 
     This has to match the redirect URI registered on the Yahoo app exactly,
-    on both the authorize request and the token exchange, or Yahoo rejects
-    the code. Override with $YAHOO_REDIRECT_URI when the app is registered
-    with something other than the loopback default.
+    on both the authorize request and the token exchange, or Yahoo refuses
+    the whole request with "invalid redirect uri". $YAHOO_REDIRECT_URI wins;
+    otherwise whatever auth.py last settled on and stored beside the
+    credentials, so the choice survives without an env var to remember.
     """
-    return os.environ.get('YAHOO_REDIRECT_URI', DEFAULT_REDIRECT_URI)
+    from_env = os.environ.get('YAHOO_REDIRECT_URI')
+    if from_env:
+        return from_env
+    return _read_json(credentials_file()).get('redirect_uri') or DEFAULT_REDIRECT_URI
+
+
+def save_redirect_uri(value):
+    """Remember a redirect URI that Yahoo actually accepts."""
+    data = _read_json(credentials_file())
+    data['redirect_uri'] = value
+    _write_private(credentials_file(), json.dumps(data, indent=2))
+    return value
 
 
 # --- Yahoo credentials ------------------------------------------------------

@@ -10,20 +10,29 @@ token in the cache carries every later run on its own, and only a revoked grant
 or a changed password brings you back here.
 
 Yahoo returns the authorization code to whichever redirect URI the app is
-registered with, so that registration decides the flow:
+registered with, and refuses the request outright for any other, so that
+registration decides the flow:
 
     http://localhost:PORT/...   a one-shot local server catches the redirect,
                                 and there is nothing to copy at all
+    oob                         Yahoo shows the code on screen to be pasted
     anything else               the browser lands somewhere that cannot
                                 receive it, so the address bar gets pasted back
 
-Set $YAHOO_REDIRECT_URI to whatever the app is registered with, at
-https://developer.yahoo.com/apps/. Register a loopback URI if the app settings
-will take one -- it is the only variant with no copying in it.
+Yahoo's app form does not accept a loopback redirect URI on every app, so the
+loopback flow is offered rather than assumed. A request it will not honour is
+answered with a redirect to Yahoo's own error page, which in a browser reads
+only as "something went wrong" -- so the request is put to Yahoo first, where
+the same response carries a description worth printing, and the out-of-band
+fallback is offered before a browser is ever opened.
+
+$YAHOO_REDIRECT_URI overrides everything. Otherwise the choice is remembered
+beside the credentials once it works.
 """
 
 import http.server
 import secrets
+import subprocess
 import time
 import urllib.parse
 import webbrowser
@@ -34,6 +43,10 @@ import config
 from league_authorization import TOKEN_URL, error_code, tokens_from
 
 AUTHORIZE_URL = 'https://api.login.yahoo.com/oauth2/request_auth'
+
+# Yahoo's out-of-band flow: it shows the code on screen instead of redirecting.
+# The fallback when an app has no redirect URI a local server can receive.
+OOB_REDIRECT = 'oob'
 
 # Long enough to find the browser window and log in, short enough that a
 # forgotten terminal does not sit on the port all day.
@@ -47,13 +60,11 @@ def main():
     state = secrets.token_urlsafe(24)
     key, secret = config.client_credentials()
 
-    url = f'{AUTHORIZE_URL}?' + urllib.parse.urlencode({
-        'client_id': key,
-        'redirect_uri': redirect,
-        'response_type': 'code',
-        'state': state,
-    })
+    complaint = preflight(authorize_url(key, redirect, state))
+    if complaint:
+        redirect = resolve(complaint, key, redirect, state)
 
+    url = authorize_url(key, redirect, state)
     loopback = loopback_address(redirect)
     code = (catch_redirect(loopback, url, state) if loopback
             else ask_for_code(url, redirect))
@@ -61,6 +72,110 @@ def main():
     config.write_tokens(exchange(code, redirect, key, secret))
     print(f"\nAuthorized. Tokens written to {config.token_file()}, owner-only.")
     print("Nothing else needs a browser: main.py refreshes from here on.")
+
+
+def authorize_url(key, redirect, state):
+    return f'{AUTHORIZE_URL}?' + urllib.parse.urlencode({
+        'client_id': key,
+        'redirect_uri': redirect,
+        'response_type': 'code',
+        'state': state,
+    })
+
+
+# --- Asking Yahoo before asking the browser ---------------------------------
+
+def preflight(url):
+    """Yahoo's complaint about this request, or None if it has none.
+
+    An unusable authorize request is answered with a redirect to Yahoo's own
+    error page, which renders in a browser as an unattributed "something went
+    wrong" -- no field named, nothing to act on. The same redirect read here
+    carries error_description, so the failure can be named before a browser is
+    ever opened.
+    """
+    try:
+        response = requests.get(url, timeout=30, allow_redirects=False)
+    except requests.RequestException:
+        return None                  # offline: let the browser report that
+
+    location = response.headers.get('Location', '')
+    if '/oauth2/error' not in location:
+        return None
+    query = urllib.parse.parse_qs(urllib.parse.urlparse(location).query)
+    return query.get('error_description', query.get('error', ['rejected']))[0]
+
+
+def resolve(complaint, key, redirect, state):
+    """Explain Yahoo's complaint, and offer the fallback when there is one."""
+    print(f"Yahoo rejected the authorization request: {complaint}.\n")
+
+    if 'redirect' not in complaint.lower():
+        raise SystemExit(
+            f"Check that the consumer key and secret match the app at "
+            f"https://developer.yahoo.com/apps/ and that it has Fantasy "
+            f"Sports read permission.")
+
+    print(f"The app is not registered with the redirect URI this is using:\n"
+          f"    {redirect}\n"
+          f"Yahoo only accepts a redirect URI that the app itself lists.\n")
+
+    if redirect != OOB_REDIRECT and preflight(
+            authorize_url(key, OOB_REDIRECT, state)) is None:
+        print("Yahoo does accept out-of-band authorization for this app, which\n"
+              "works the same way but shows you a code to paste instead of\n"
+              "redirecting. Nothing else about the setup changes.\n")
+        if confirm("Use out-of-band authorization and remember that choice?",
+                   default=True):
+            config.save_redirect_uri(OOB_REDIRECT)
+            print(f"  Saved to {config.credentials_file()}.\n")
+            return OOB_REDIRECT
+
+    raise SystemExit(
+        f"Set the app's redirect URI at https://developer.yahoo.com/apps/ to "
+        f"match, or point $YAHOO_REDIRECT_URI at whatever it does list.")
+
+
+def confirm(question, default=False):
+    suffix = "[Y/n]" if default else "[y/N]"
+    answer = input(f"{question} {suffix} ").strip().lower()
+    return default if not answer else answer.startswith('y')
+
+
+# --- Opening a browser ------------------------------------------------------
+
+def open_browser(url):
+    """Open a URL, including from WSL, where webbrowser usually cannot.
+
+    Inside WSL, Python picks whatever it can find -- often 'gio' -- and there
+    is no Linux desktop for it to hand the URL to, so the call quietly does
+    nothing. The Windows browser is reachable over interop instead.
+    """
+    if _is_wsl():
+        for command in (['wslview', url],
+                        ['powershell.exe', '-NoProfile', '-Command',
+                         f"Start-Process '{url}'"],
+                        ['explorer.exe', url]):
+            try:
+                subprocess.run(command, timeout=20,
+                               stdout=subprocess.DEVNULL,
+                               stderr=subprocess.DEVNULL)
+                return True
+            except (FileNotFoundError, subprocess.SubprocessError):
+                continue
+        return False
+    try:
+        return webbrowser.open(url)
+    except webbrowser.Error:
+        return False
+
+
+def _is_wsl():
+    try:
+        with open('/proc/version') as handle:
+            return 'microsoft' in handle.read().lower()
+    except OSError:
+        return False
 
 
 # --- Catching the redirect --------------------------------------------------
@@ -115,7 +230,7 @@ def catch_redirect(loopback, url, state):
 
     print(f"Opening Yahoo in your browser. If it does not open, visit:\n\n  {url}\n")
     print(f"Waiting for the redirect back to {host}:{port} ...")
-    webbrowser.open(url)
+    open_browser(url)
 
     # Polled rather than blocked on, so that a 404 for some unrelated request
     # does not consume the one chance to catch the real redirect.
@@ -140,10 +255,14 @@ def catch_redirect(loopback, url, state):
 
 def ask_for_code(url, redirect):
     """Fall back to the browser as courier when the redirect cannot be served."""
-    print(f"This app is registered with {redirect}, which cannot be listened "
-          f"on locally.\nOpen this and approve access:\n\n  {url}\n")
-    print("Then paste the address you were redirected to -- the whole thing, "
-          "even if\nthe page failed to load. The code is in it.")
+    opened = open_browser(url)
+    where = "Your browser should be open at" if opened else "Open this and approve access"
+    print(f"{where}:\n\n  {url}\n")
+    if redirect == OOB_REDIRECT:
+        print("Yahoo will show you a code once you approve. Paste it here.")
+    else:
+        print("Then paste the address you were redirected to -- the whole "
+              "thing, even if\nthe page failed to load. The code is in it.")
     return code_from(input('> ').strip())
 
 

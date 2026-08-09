@@ -52,8 +52,10 @@ with Fantasy Sports read permission, and set its redirect URI to
 http://localhost:8731/callback
 ```
 
-If Yahoo will not accept that, see "Authorizing" below — any registered
-redirect URI works, it just changes how the code gets back to you.
+Yahoo does not accept a loopback redirect URI on every app. If yours refuses,
+register nothing and carry on — `auth.py` detects it, explains it, and offers
+out-of-band authorization instead, which shows you a code to paste. Either way
+works; it only changes how the code gets back to you.
 
 Then:
 
@@ -94,11 +96,23 @@ redirect on `http://localhost:8731/callback`, and writes the tokens. There is
 nothing to copy and no verifier code to retype.
 
 That works only if the app at
-[developer.yahoo.com/apps](https://developer.yahoo.com/apps/) is registered with
-that exact redirect URI. Register it if you can. If Yahoo will not accept a
-loopback URI, register whatever it does accept, point `$YAHOO_REDIRECT_URI` at
-it, and `auth.py` falls back to asking you to paste the address you landed on —
-the whole URL, even if the page failed to load, since the code is in it.
+[developer.yahoo.com/apps](https://developer.yahoo.com/apps/) lists that exact
+redirect URI. Yahoo refuses any other, and the browser shows an unattributed
+"something went wrong" when it does — so `auth.py` puts the request to Yahoo
+first and prints the real reason instead:
+
+```
+Yahoo rejected the authorization request: invalid redirect uri.
+```
+
+It then offers out-of-band authorization, where Yahoo displays a code for you
+to paste, and remembers that choice beside the credentials so later runs skip
+the whole exchange. `$YAHOO_REDIRECT_URI` overrides it if you register a real
+redirect URI later.
+
+Inside WSL, `webbrowser` picks a handler with no desktop behind it and silently
+opens nothing, so the URL is opened through Windows interop (`wslview`, then
+PowerShell, then `explorer.exe`) and printed either way.
 
 After that, nothing opens a browser again. Refresh tokens last until they are
 revoked, so `main.py` renews the hourly access token by itself and can run
