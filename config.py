@@ -164,6 +164,15 @@ def write_tokens(tokens):
     return tokens
 
 
+def discard_tokens():
+    """Throw the cached tokens away. True if there were any to throw."""
+    try:
+        os.remove(token_file())
+        return True
+    except FileNotFoundError:
+        return False
+
+
 def write_credentials(key, secret):
     """Write the consumer key and secret. Only init.py has cause to call this."""
     path = credentials_file()

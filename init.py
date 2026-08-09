@@ -64,10 +64,18 @@ def main():
     if not (wrote_credentials or wrote_league):
         print("Nothing changed.")
 
-    if config.read_tokens_if_any():
+    # A grant belongs to the app that issued it. New credentials mean a
+    # different app, so any cached tokens are dead weight -- keeping them would
+    # make this report success and leave the next run failing on a refresh the
+    # new consumer key cannot sign.
+    if wrote_credentials and config.discard_tokens():
+        print(f"  Discarded the old tokens: they were issued to the previous "
+              f"app and cannot be refreshed with these credentials.")
+    elif config.read_tokens_if_any():
         print("\nYou already have Yahoo tokens. Re-authorize only if they "
               "stopped working: uv run auth.py")
         return
+
     if confirm("\nAuthorize with Yahoo in a browser now?", default=True):
         import auth
         auth.main()

@@ -138,6 +138,66 @@ def test_empty_secret_is_reasked(monkeypatch):
     assert init.prompt_secret('Consumer Secret') == 'realsecret'
 
 
+# --- Switching to a different Yahoo app -------------------------------------
+
+def test_new_credentials_discard_the_old_apps_tokens(store, monkeypatch, capsys):
+    """A grant belongs to the app that issued it, so it cannot come along."""
+    config.write_tokens({'access_token': 'OLD', 'refresh_token': 'OLD',
+                         'expires_at': 9e9})
+    with open(config.credentials_file(), 'w') as out:
+        json.dump({'consumer_key': 'OLD', 'consumer_secret': 'OLD'}, out)
+
+    key = 'dj0y' + 'n' * 40
+    # replace credentials? y | key | secret confirm y | replace league id? n
+    # | authorize now? n
+    answers(monkeypatch, ['y', key, 'y', 'n', 'n'], secret='new' * 20)
+    monkeypatch.setattr(init.sys.stdin, 'isatty', lambda: True)
+    with open(config.LEAGUE_ID_FILE, 'w') as out:
+        out.write('[DEFAULT]\nleagueid = 1\n')
+
+    init.main()
+
+    assert config.read_tokens_if_any() is None, "kept a grant from another app"
+    assert 'Discarded the old tokens' in capsys.readouterr().out
+
+
+def test_switching_apps_still_offers_authorization(store, monkeypatch, capsys):
+    """The old bug: stale tokens made init report success and stop."""
+    config.write_tokens({'access_token': 'OLD', 'refresh_token': 'OLD',
+                         'expires_at': 9e9})
+    with open(config.credentials_file(), 'w') as out:
+        json.dump({'consumer_key': 'OLD', 'consumer_secret': 'OLD'}, out)
+    with open(config.LEAGUE_ID_FILE, 'w') as out:
+        out.write('[DEFAULT]\nleagueid = 1\n')
+
+    key = 'dj0y' + 'n' * 40
+    answers(monkeypatch, ['y', key, 'y', 'n', 'n'], secret='new' * 20)
+    monkeypatch.setattr(init.sys.stdin, 'isatty', lambda: True)
+
+    init.main()
+
+    output = capsys.readouterr().out
+    assert 'You already have Yahoo tokens' not in output
+    assert 'Authorize later with' in output, "never offered to authorize"
+
+
+def test_keeping_existing_credentials_keeps_the_tokens(store, monkeypatch, capsys):
+    config.write_tokens({'access_token': 'KEEP', 'refresh_token': 'KEEP',
+                         'expires_at': 9e9})
+    with open(config.credentials_file(), 'w') as out:
+        json.dump({'consumer_key': 'K', 'consumer_secret': 'S'}, out)
+    with open(config.LEAGUE_ID_FILE, 'w') as out:
+        out.write('[DEFAULT]\nleagueid = 1\n')
+
+    answers(monkeypatch, ['n', 'n'])          # replace neither
+    monkeypatch.setattr(init.sys.stdin, 'isatty', lambda: True)
+
+    init.main()
+
+    assert config.read_tokens_if_any()['refresh_token'] == 'KEEP'
+    assert 'You already have Yahoo tokens' in capsys.readouterr().out
+
+
 # --- Non-interactive use ----------------------------------------------------
 
 def test_running_without_a_terminal_says_what_to_set_instead(monkeypatch):
