@@ -62,9 +62,14 @@ class YahooRoster:
                 try:
                     for item in (data["fantasy_content"]["team"][1]["players"]):
                         if 'count' not in item:
+                            # Reset per player: bound inside the try below, it
+                            # would otherwise be undefined for the first player
+                            # missing percent_owned, and carry the previous
+                            # player's number for every one after that.
+                            percentowned = ''
                             try:
                                 percentowned = data["fantasy_content"]["team"][1]["players"][str(playercount)]["player"][1]['percent_owned'][1]['value']
-                            except:
+                            except (KeyError, IndexError, TypeError):
                                 logger.warning(f"No percent_owned for entry {shape(item)}")
                             finally:
                                     row = [data["fantasy_content"]["team"][1]["players"][str(playercount)]["player"][0][1]["player_id"],data["fantasy_content"]["team"][1]["players"][str(playercount)]["player"][0][2]["name"]["full"],data["fantasy_content"]["team"][0][2]["name"],percentowned]
