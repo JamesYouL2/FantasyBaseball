@@ -3,7 +3,8 @@ import os
 import pandas as pd
 import numpy as np
 from loguru import logger
-import requests
+
+import fangraphs
 
 # Edit these two lines once a year. They are named rather than inlined so the
 # error messages below can tell you which season a failed fetch was for.
@@ -88,21 +89,18 @@ def _read_local_csv(path, description, remedy, **kwargs):
 def _fetch_projections(stats, projection_type):
     """Pull one projections feed off Fangraphs, or explain the failure."""
     label = {'bat': 'hitter', 'pit': 'pitcher'}.get(stats, stats)
-    url = f'https://www.fangraphs.com/api/projections?stats={stats}&type={projection_type}'
+    url = 'https://www.fangraphs.com/api/projections'
+    params = {'stats': stats, 'type': projection_type}
     try:
-        frame = pd.read_json(url)
-    except ValueError as e:
+        payload = fangraphs.get_json(
+            url, params, description=f"the {label} projections ({projection_type})")
+    except fangraphs.FangraphsError as e:
         raise RankingsError(
-            f"Fangraphs returned something that is not JSON for the {label} "
-            f"projections ({projection_type}). The endpoint serves an error "
-            f"page rather than a JSON error, so this usually means the "
-            f"projection type '{projection_type}' has been retired or "
-            f"renamed. URL: {url}") from e
-    except OSError as e:
-        # urllib raises HTTPError/URLError, both OSError subclasses.
-        raise RankingsError(
-            f"Could not reach Fangraphs for the {label} projections "
-            f"({projection_type}): {e}. URL: {url}") from e
+            f"{e} A non-JSON response usually means the projection type "
+            f"'{projection_type}' has been retired or renamed, since the "
+            f"endpoint serves an error page rather than a JSON error. "
+            f"URL: {url}?stats={stats}&type={projection_type}") from e
+    frame = pd.DataFrame(payload)
     if frame.empty:
         raise RankingsError(
             f"Fangraphs returned no {label} projections for type "
@@ -149,19 +147,10 @@ def fg_fielding_leaders(season: int = CURRENT_SEASON, qual: int = 0) -> pd.DataF
         "pageitems": "500000",
     }
     try:
-        resp = requests.get(url, params=params, timeout=60)
-        resp.raise_for_status()
-    except requests.RequestException as e:
-        raise RankingsError(
-            f"Could not fetch the {season} fielding leaderboard from "
-            f"Fangraphs: {e}") from e
-    try:
-        payload = resp.json()
-    except ValueError as e:
-        raise RankingsError(
-            f"The {season} fielding leaderboard came back as "
-            f"{resp.headers.get('Content-Type', 'an unknown type')} rather "
-            f"than JSON, starting: {resp.text[:200]!r}") from e
+        payload = fangraphs.get_json(
+            url, params, description=f"the {season} fielding leaderboard")
+    except fangraphs.FangraphsError as e:
+        raise RankingsError(str(e)) from e
     if "data" not in payload:
         raise RankingsError(
             f"The {season} fielding leaderboard has no 'data' key. Its keys "

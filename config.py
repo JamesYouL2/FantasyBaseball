@@ -4,11 +4,11 @@
 Configuration is split by how long a value lives, because that is what decides
 how carefully it has to be handled:
 
-    Consumer key and secret   Issued once by Yahoo and never rotated. This
-                              project only ever reads them, so nothing it does
-                              can corrupt them. From $YAHOO_CONSUMER_KEY and
-                              $YAHOO_CONSUMER_SECRET, or from the JSON file at
-                              $YAHOO_OAUTH_FILE.
+    Consumer key and secret   Issued once by Yahoo and never rotated. Written
+                              once by init.py and only read from then on, so
+                              nothing in the daily path can corrupt them. From
+                              $YAHOO_CONSUMER_KEY and $YAHOO_CONSUMER_SECRET,
+                              or from the JSON file at $YAHOO_OAUTH_FILE.
 
     Tokens                    The refresh token lasts until it is revoked; the
                               access token lasts an hour. Both are disposable
@@ -49,7 +49,7 @@ DEFAULT_REDIRECT_URI = 'http://localhost:8731/callback'
 # --- Paths ------------------------------------------------------------------
 
 def credentials_file():
-    """Path to the consumer key and secret. Read, never written."""
+    """Path to the consumer key and secret. Written only by init.py."""
     return os.path.expanduser(
         os.environ.get('YAHOO_OAUTH_FILE', DEFAULT_CREDENTIALS_FILE))
 
@@ -118,24 +118,52 @@ def read_tokens():
         f"  uv run auth.py")
 
 
+def read_tokens_if_any():
+    """The cached tokens, or None where their absence is not an error."""
+    try:
+        return read_tokens()
+    except SystemExit:
+        return None
+
+
 def write_tokens(tokens):
     """Write the token cache owner-only and atomically, and return it."""
-    path = token_file()
+    _write_private(token_file(), json.dumps(tokens, indent=2))
+    return tokens
+
+
+def write_credentials(key, secret):
+    """Write the consumer key and secret. Only init.py has cause to call this."""
+    path = credentials_file()
+    _write_private(path, json.dumps(
+        {'consumer_key': key, 'consumer_secret': secret}, indent=2))
+    return path
+
+
+def write_league_id(value):
+    """Write leagueid.ini in the form league_id() reads back."""
+    _write_private(LEAGUE_ID_FILE, f"[DEFAULT]\nleagueid = {value}\n")
+    return LEAGUE_ID_FILE
+
+
+def _write_private(path, text):
+    """Write a file only its owner can read, without ever exposing a partial one.
+
+    Created 0600 rather than chmodded afterwards: a chmod leaves a window in
+    which the contents are on disk under the default umask. Written to a
+    sibling and renamed, because os.replace is atomic -- an interrupted write
+    cannot leave a half-file where the working one used to be.
+    """
     directory = os.path.dirname(path)
     if directory:
         os.makedirs(directory, exist_ok=True)
 
-    # Created 0600 rather than chmodded afterwards: a chmod leaves a window in
-    # which the tokens are on disk under the default umask. Written to a
-    # sibling and renamed so an interrupted write cannot leave a half-file
-    # where the working tokens used to be.
     temporary = f'{path}.tmp'
     handle = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_TRUNC,
                      stat.S_IRUSR | stat.S_IWUSR)
     with os.fdopen(handle, 'w') as out:
-        json.dump(tokens, out, indent=2)
+        out.write(text)
     os.replace(temporary, path)
-    return tokens
 
 
 def _read_json(path):

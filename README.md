@@ -38,12 +38,26 @@ long they live, because that decides how carefully each has to be handled:
 | League id | — | `leagueid.ini` | `YAHOO_LEAGUE_ID` (value) |
 | Redirect URI | — | — | `YAHOO_REDIRECT_URI` (value) |
 
-The token file is the only one the code ever writes, and it holds nothing that
-cannot be thrown away: delete it and `uv run auth.py` mints another. The
-credential file is read and never touched, so nothing this project does can
-damage it. All of them are gitignored.
+The token file is the only one the daily path ever writes, and it holds nothing
+that cannot be thrown away: delete it and `uv run auth.py` mints another. The
+credential file is written once by `init.py` and only read from then on, so
+nothing that runs daily can damage it. All of them are gitignored.
 
 To set up:
+
+```
+uv run init.py
+```
+
+It asks for the three values, writes them owner-only, and hands straight over
+to the browser authorization. Re-running it replaces nothing without asking.
+
+It prompts rather than taking arguments on purpose: a command-line argument
+lands in your shell history and is visible in `ps` to everyone else on the
+machine for as long as the process runs. The secret is read with `getpass`, so
+it is not echoed and does not stay in the scrollback either.
+
+To do it by hand instead:
 
 ```
 cp auth/example.json auth/oauth2yahoo.json    # then add your key and secret
@@ -79,6 +93,45 @@ revoked, so `main.py` renews the hourly access token by itself and can run
 unattended. `league_authorization.py` cannot prompt — if the grant is ever
 revoked it exits and tells you to re-run `auth.py`, rather than blocking a
 scheduled run on a prompt nobody is there to answer.
+
+## Talking to Fangraphs
+
+`fangraphs.py` is the only thing that makes outbound requests to Fangraphs. A
+full run is four of them, once a day — two projections feeds and two seasons of
+fielding — which is less traffic than a person loading the leaderboard twice.
+
+Fangraphs sits behind Cloudflare, as a CDN rather than a wall: the endpoint
+advertises `Cache-Control: public, max-age=300` and repeat requests come back
+`cf-cache-status: HIT`, meaning they are answered at the edge and never reach
+the origin. Nothing here works around a block. It makes this the kind of client
+that does not attract one:
+
+| Environment variable | Default | What it does |
+| --- | --- | --- |
+| `FANGRAPHS_CONTACT` | unset | An email added to the User-Agent. Set it — an anonymous client is the one that gets challenged first, and being identifiable is what gets you an email instead of a silent ban. |
+| `FANGRAPHS_CACHE_DIR` | `.cache/fangraphs` | Where responses are cached |
+| `FANGRAPHS_CACHE_TTL` | `300` | Seconds a cached response stays fresh, matching Fangraphs' own header. `0` disables the cache. |
+
+Requests are retried on 429 and 5xx with exponential backoff, honouring
+`Retry-After` when the server sends one. A 404 is not retried, because
+repeating a wrong request will not make it right. When a fetch fails outright
+and a stale cache entry exists, that is served with a warning — an outage costs
+you freshness rather than the whole run.
+
+If Cloudflare ever does challenge a request, it fails with a message saying so
+and quoting the `CF-RAY`. The fix is to set `FANGRAPHS_CONTACT` and slow down,
+or to ask Fangraphs — not to imitate a browser, which is fragile, breaks
+silently at the worst time, and is the thing their terms actually prohibit.
+
+## Tests
+
+```
+uv run pytest
+```
+
+They cover the authorization layer and the Fangraphs transport, and touch the
+network only over loopback — a local server stands in for Yahoo's redirect and
+for a rate-limiting Fangraphs.
 
 ## Keeping credentials out of the repo
 

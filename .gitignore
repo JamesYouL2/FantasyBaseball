@@ -21,6 +21,9 @@ auth/*
 *.pem
 *.key
 
+#cached fangraphs responses
+.cache/
+
 #notebook scratch
 .ipynb_checkpoints/
 **/.ipynb_checkpoints/
