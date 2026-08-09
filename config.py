@@ -1,78 +1,152 @@
 # -*- coding: utf-8 -*-
 """Everything this project needs configured before it can run.
 
-Two files hold that configuration, and the split is forced rather than chosen:
+Configuration is split by how long a value lives, because that is what decides
+how carefully it has to be handled:
 
-    auth/oauth2yahoo.json   Consumer key and secret, plus the access and
-                            refresh tokens. yahoo_oauth owns this file's
-                            format and rewrites it in place on every token
-                            refresh, so it cannot be folded into the ini.
+    Consumer key and secret   Issued once by Yahoo and never rotated. This
+                              project only ever reads them, so nothing it does
+                              can corrupt them. From $YAHOO_CONSUMER_KEY and
+                              $YAHOO_CONSUMER_SECRET, or from the JSON file at
+                              $YAHOO_OAUTH_FILE.
 
-    leagueid.ini            The league id. Not a secret, but not public
-                            either, and it should never reach a commit.
+    Tokens                    The refresh token lasts until it is revoked; the
+                              access token lasts an hour. Both are disposable
+                              -- delete the file and `uv run auth.py` mints new
+                              ones -- so this is the only file the code writes,
+                              and it holds nothing that cannot be replaced.
 
-Both are gitignored, and either can be pointed outside the working tree with
-an environment variable so nothing sensitive has to sit in the repo at all:
+    League id                 Not a secret, but not public either.
+                              $YAHOO_LEAGUE_ID or leagueid.ini.
+
+Keeping the tokens out of the credential file is the point of the split. The
+library this replaced kept all four in one file and rewrote the whole thing on
+every refresh, which put the consumer secret at risk hourly to save a value
+that expires in an hour anyway.
+
+Everything except the example files is gitignored, and each path can be pointed
+outside the working tree so nothing sensitive has to sit in the repo at all:
 
     export YAHOO_OAUTH_FILE=~/.config/fantasybaseball/oauth2yahoo.json
+    export YAHOO_TOKEN_FILE=~/.config/fantasybaseball/token.json
     export YAHOO_LEAGUE_ID=123456
 """
 
 import configparser
-import logging
+import json
 import os
 import stat
 
-DEFAULT_OAUTH_FILE = 'auth/oauth2yahoo.json'
+DEFAULT_CREDENTIALS_FILE = 'auth/oauth2yahoo.json'
+DEFAULT_TOKEN_FILE = 'auth/token.json'
 LEAGUE_ID_FILE = 'leagueid.ini'
 
-# yahoo_oauth and oauthlib log full token payloads at INFO.
-_NOISY_LOGGERS = ('yahoo_oauth', 'oauthlib', 'requests_oauthlib')
+# Loopback, because a redirect to 127.0.0.1 is the only kind auth.py can catch
+# by itself. See auth.py for what happens when the app is registered otherwise.
+DEFAULT_REDIRECT_URI = 'http://localhost:8731/callback'
+
+
+# --- Paths ------------------------------------------------------------------
+
+def credentials_file():
+    """Path to the consumer key and secret. Read, never written."""
+    return os.path.expanduser(
+        os.environ.get('YAHOO_OAUTH_FILE', DEFAULT_CREDENTIALS_FILE))
+
+
+def token_file():
+    """Path to the token cache. The only file this project writes."""
+    return os.path.expanduser(
+        os.environ.get('YAHOO_TOKEN_FILE', DEFAULT_TOKEN_FILE))
+
+
+def redirect_uri():
+    """Where Yahoo sends the authorization code back to.
+
+    This has to match the redirect URI registered on the Yahoo app exactly,
+    on both the authorize request and the token exchange, or Yahoo rejects
+    the code. Override with $YAHOO_REDIRECT_URI when the app is registered
+    with something other than the loopback default.
+    """
+    return os.environ.get('YAHOO_REDIRECT_URI', DEFAULT_REDIRECT_URI)
 
 
 # --- Yahoo credentials ------------------------------------------------------
 
-def oauth_file():
-    """Path to the yahoo_oauth credential file, overridable via env var."""
-    return os.path.expanduser(
-        os.environ.get('YAHOO_OAUTH_FILE', DEFAULT_OAUTH_FILE))
+def client_credentials():
+    """The consumer key and secret, from the environment or the JSON file."""
+    key = os.environ.get('YAHOO_CONSUMER_KEY')
+    secret = os.environ.get('YAHOO_CONSUMER_SECRET')
+    if key and secret:
+        return key, secret
+
+    path = credentials_file()
+    data = _read_json(path)
+    key = key or data.get('consumer_key')
+    secret = secret or data.get('consumer_secret')
+    if key and secret:
+        return key, secret
+
+    raise SystemExit(
+        f"No Yahoo consumer key and secret. Either export "
+        f"YAHOO_CONSUMER_KEY and YAHOO_CONSUMER_SECRET, or copy "
+        f"auth/example.json to {path} and fill them in.")
 
 
-def silence_token_logging():
-    """Stop the oauth libraries from printing tokens to stdout and logs."""
-    for name in _NOISY_LOGGERS:
-        logging.getLogger(name).setLevel(logging.WARNING)
+# --- Tokens -----------------------------------------------------------------
 
+def read_tokens():
+    """The cached tokens, or whatever a previous yahoo_oauth setup left behind.
 
-def prepare(path=None):
-    """Return the credential file path, owner-locked and ready to use."""
-    path = path or oauth_file()
-    if not os.path.exists(path):
-        raise FileNotFoundError(
-            f"No Yahoo credentials at {path}. Copy auth/example.json there and "
-            f"fill in your consumer key and secret, or point YAHOO_OAUTH_FILE "
-            f"at a copy outside this repository.")
-    try:
-        os.chmod(path, stat.S_IRUSR | stat.S_IWUSR)  # 0600
-    except OSError:
-        # Windows drives mounted under WSL do not honour POSIX modes.
-        pass
-    silence_token_logging()
-    return path
-
-
-def consumer_key(env_var="YAHOO_CONSUMER_KEY"):
-    """Consumer key from the environment, if you would rather not use a file.
-
-    Unused by the current flow: yahoo_oauth reads the key straight out of
-    oauth_file() because it needs to write refreshed tokens back to it.
+    yahoo_oauth stored its tokens in the credential file. Picking a refresh
+    token up from there means an existing checkout upgrades without a trip
+    through the browser; the next write lands in the token cache, and the old
+    copy is never read again.
     """
-    return os.environ.get(env_var)
+    tokens = _read_json(token_file())
+    if tokens.get('refresh_token'):
+        return tokens
+
+    inherited = _read_json(credentials_file()).get('refresh_token')
+    if inherited:
+        # No expiry is recorded, so the access token beside it is treated as
+        # already dead and the first call refreshes.
+        return {'refresh_token': inherited, 'expires_at': 0}
+
+    raise SystemExit(
+        f"No Yahoo tokens at {token_file()}. Authorize once with:\n"
+        f"  uv run auth.py")
 
 
-def consumer_secret(env_var="YAHOO_CONSUMER_SECRET"):
-    """Consumer secret from the environment. See consumer_key()."""
-    return os.environ.get(env_var)
+def write_tokens(tokens):
+    """Write the token cache owner-only and atomically, and return it."""
+    path = token_file()
+    directory = os.path.dirname(path)
+    if directory:
+        os.makedirs(directory, exist_ok=True)
+
+    # Created 0600 rather than chmodded afterwards: a chmod leaves a window in
+    # which the tokens are on disk under the default umask. Written to a
+    # sibling and renamed so an interrupted write cannot leave a half-file
+    # where the working tokens used to be.
+    temporary = f'{path}.tmp'
+    handle = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_TRUNC,
+                     stat.S_IRUSR | stat.S_IWUSR)
+    with os.fdopen(handle, 'w') as out:
+        json.dump(tokens, out, indent=2)
+    os.replace(temporary, path)
+    return tokens
+
+
+def _read_json(path):
+    """Parse a JSON file, treating a missing one as empty."""
+    try:
+        with open(path) as handle:
+            return json.load(handle)
+    except FileNotFoundError:
+        return {}
+    except ValueError as error:
+        raise SystemExit(f"{path} is not valid JSON: {error}")
 
 
 # --- League ----------------------------------------------------------------

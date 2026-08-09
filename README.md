@@ -28,33 +28,57 @@ Commit `pyproject.toml` and `uv.lock` together — a lockfile that disagrees wit
 
 ## Configuration
 
-`config.py` is the only place that reads configuration. It draws on two files,
-both gitignored, and each one can be replaced by an environment variable:
+`config.py` is the only place that reads configuration. Values are split by how
+long they live, because that decides how carefully each has to be handled:
 
-| What | File | Environment variable |
-| --- | --- | --- |
-| Consumer key, secret, tokens | `auth/oauth2yahoo.json` | `YAHOO_OAUTH_FILE` (path) |
-| League id | `leagueid.ini` | `YAHOO_LEAGUE_ID` (value) |
+| What | Lives for | File | Environment variable |
+| --- | --- | --- | --- |
+| Consumer key and secret | Until you rotate them | `auth/oauth2yahoo.json` | `YAHOO_OAUTH_FILE` (path), or `YAHOO_CONSUMER_KEY` / `YAHOO_CONSUMER_SECRET` (values) |
+| Access and refresh tokens | An hour / until revoked | `auth/token.json` | `YAHOO_TOKEN_FILE` (path) |
+| League id | — | `leagueid.ini` | `YAHOO_LEAGUE_ID` (value) |
+| Redirect URI | — | — | `YAHOO_REDIRECT_URI` (value) |
 
-They stay separate because `yahoo_oauth` owns the JSON file: it rewrites it in
-place every time the access token is refreshed, so its format and location are
-the library's to decide, not ours.
+The token file is the only one the code ever writes, and it holds nothing that
+cannot be thrown away: delete it and `uv run auth.py` mints another. The
+credential file is read and never touched, so nothing this project does can
+damage it. All of them are gitignored.
 
 To set up:
 
 ```
 cp auth/example.json auth/oauth2yahoo.json    # then add your key and secret
 cp example.ini leagueid.ini                   # then fill in leagueid=
+uv run auth.py                                # authorize once, in a browser
 ```
 
-Or skip both files entirely:
+Or skip the files entirely:
 
 ```
-export YAHOO_OAUTH_FILE=~/.config/fantasybaseball/oauth2yahoo.json
+export YAHOO_CONSUMER_KEY=... YAHOO_CONSUMER_SECRET=...
+export YAHOO_TOKEN_FILE=~/.config/fantasybaseball/token.json
 export YAHOO_LEAGUE_ID=123456
 ```
 
 See "Keeping credentials out of the repo" below before you start.
+
+## Authorizing
+
+`uv run auth.py` is a one-time step. It opens Yahoo in a browser, catches the
+redirect on `http://localhost:8731/callback`, and writes the tokens. There is
+nothing to copy and no verifier code to retype.
+
+That works only if the app at
+[developer.yahoo.com/apps](https://developer.yahoo.com/apps/) is registered with
+that exact redirect URI. Register it if you can. If Yahoo will not accept a
+loopback URI, register whatever it does accept, point `$YAHOO_REDIRECT_URI` at
+it, and `auth.py` falls back to asking you to paste the address you landed on —
+the whole URL, even if the page failed to load, since the code is in it.
+
+After that, nothing opens a browser again. Refresh tokens last until they are
+revoked, so `main.py` renews the hourly access token by itself and can run
+unattended. `league_authorization.py` cannot prompt — if the grant is ever
+revoked it exits and tells you to re-run `auth.py`, rather than blocking a
+scheduled run on a prompt nobody is there to answer.
 
 ## Keeping credentials out of the repo
 
@@ -87,18 +111,18 @@ To clean a notebook on disk (rather than just on commit):
 python3 scripts/nbstrip.py --inplace draft/draft.ipynb
 ```
 
-Better still, keep the credential file outside the working tree altogether:
+Better still, keep both files outside the working tree altogether:
 
 ```
 mkdir -p ~/.config/fantasybaseball
 cp auth/example.json ~/.config/fantasybaseball/oauth2yahoo.json
 export YAHOO_OAUTH_FILE=~/.config/fantasybaseball/oauth2yahoo.json
+export YAHOO_TOKEN_FILE=~/.config/fantasybaseball/token.json
 ```
 
-`yahoo_oauth` rewrites that file on every token refresh, so it ends up holding
-the consumer secret, the access token and the refresh token. The code chmods it
-to `0600` and silences the oauth libraries, which otherwise log token payloads
-at INFO.
+The token file is created `0600` at the moment it is opened rather than
+chmodded afterwards, and is written to a sibling and renamed, so an interrupted
+write cannot leave a half-file where the working tokens were.
 
 To audit the whole history for leaked values:
 

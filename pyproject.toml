@@ -4,12 +4,27 @@ version = "0.1.0"
 description = "Sync fangraphs depth chart projections with a Yahoo fantasy baseball league"
 readme = "README.md"
 requires-python = ">=3.12"
+# Bounded below by what the code actually uses and above at the next major,
+# where a project is allowed to break its API. uv.lock still pins one exact
+# resolution, so a checkout reproduces this environment regardless; these
+# bounds only decide what `uv lock` is permitted to move to.
+#
+# loguru is pre-1.0, where the minor version is the breaking one, so its
+# ceiling sits a minor away rather than a major.
 dependencies = [
-    "ipykernel==6.29.5",
-    "loguru==0.7.3",
-    "numpy==2.2.4",
-    "pandas==2.2.3",
-    "pybaseball",
-    "requests==2.32.3",
-    "yahoo-oauth==2.1.1",
+    "ipykernel>=6.29,<7",
+    "loguru>=0.7,<0.8",
+    "numpy>=2.2,<3",
+    "pandas>=2.2,<3",
+    "requests>=2.32,<3",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0,<9",
+]
+
+[tool.pytest.ini_options]
+# The modules under test sit at the repository root rather than in a package.
+pythonpath = ["."]
+testpaths = ["tests"]

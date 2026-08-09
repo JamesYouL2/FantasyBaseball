@@ -34,7 +34,7 @@ for f in $staged; do
     esac
 
     case "$f" in
-        auth/*|*.env|.env*|*oauth2*|*secret*|*credential*|*.pem|*.key)
+        auth/*|*.env|.env*|*oauth2*|*token*|*secret*|*credential*|*.pem|*.key)
             echo "BLOCKED: $f looks like a credential file."
             fail=1 ;;
     esac

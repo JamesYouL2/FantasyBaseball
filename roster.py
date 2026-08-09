@@ -8,26 +8,24 @@ Created on Mon Apr  1 11:56:27 2019
 import csv
 import os
 from loguru import logger
-from league_authorization import initialize_oauth_file
+from league_authorization import session
 from config import shape
 
 class YahooRoster:
     def __init__(self, leagueid):
         self.leagueid = leagueid
-        self.oauth = initialize_oauth_file()
+        self.session = session()
 
     def getgameid(self, game='mlb'):
-        oauth = self.oauth
         url = 'https://fantasysports.yahooapis.com/fantasy/v2/game/' + game
-        response = oauth.session.get(url, params={'format': 'json'})
+        response = self.session.get(url, params={'format': 'json'})
         data = response.json()
         return data['fantasy_content']['game'][0]['game_id']
 
     def _get_team_keys(self, leagueid):
-        oauth = self.oauth
         gameid = self.getgameid()
         url = f'https://fantasysports.yahooapis.com/fantasy/v2/league/{str(gameid)}.l.{str(leagueid)}/standings'
-        response = oauth.session.get(url, params={'format': 'json'})
+        response = self.session.get(url, params={'format': 'json'})
         data = response.json()
         team_list = list()
         try:
@@ -43,7 +41,6 @@ class YahooRoster:
         return team_list
 
     def updateroster(self):
-        oauth = self.oauth
         gameid = self.getgameid()
         logger.info(f"Game ID: {gameid}")
 
@@ -56,7 +53,7 @@ class YahooRoster:
             csvwriter.writerow(['playerid','player_name','team','percent_owned'])
             for team in team_list:
                 url = f'https://fantasysports.yahooapis.com/fantasy/v2/team/{str(team)}/players/percent_owned'
-                response = oauth.session.get(url, params={'format': 'json'})
+                response = self.session.get(url, params={'format': 'json'})
                 data = response.json()
                 playercount = 0
                 try:
