@@ -53,20 +53,21 @@ def test_403_names_permissions_not_the_payload(monkeypatch):
 
     message = str(raised.value)
     assert 'This application is not authorized' in message
-    assert 'developer.yahoo.com' in message
-    assert 'Fantasy Sports' in message
+    assert 'sports.yahoo.com/developer/access' in message, "no route to access"
+    assert 'Keep the existing app' in message, "a new app cannot get this permission"
 
 
-def test_403_says_the_token_must_be_reminted(monkeypatch):
-    """Changing the app permission does not upgrade an already-issued grant."""
+def test_403_mentions_re_authorizing_as_the_secondary_case(monkeypatch):
+    """Only relevant once access is granted, so it comes after the real fix."""
     api = yahoo_says(monkeypatch, refusal(403, 'not authorized'))
 
     with pytest.raises(roster.YahooAPIError) as raised:
         api.getgameid()
 
     message = str(raised.value)
-    assert config.token_file() in message
     assert 'auth.py' in message
+    assert message.index('developer/access') < message.index('auth.py'), \
+        "re-authorizing is not the fix and must not lead"
 
 
 def test_403_does_not_send_you_to_re_login(monkeypatch):
@@ -89,7 +90,7 @@ def test_401_points_at_re_authorizing(monkeypatch):
 
     message = str(raised.value)
     assert 'auth.py' in message
-    assert 'developer.yahoo.com' not in message, "401 is a token problem, not a permissions one"
+    assert 'developer/access' not in message, "401 is a token problem, not an access one"
 
 
 def test_500_is_reported_with_the_status(monkeypatch):

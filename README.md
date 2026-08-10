@@ -45,6 +45,16 @@ that cannot be thrown away: delete it and `uv run auth.py` mints another. The
 credential file is written once by `init.py` and only read from then on, so
 nothing that runs daily can damage it. All of them are gitignored.
 
+> **Yahoo Fantasy API access is no longer self-serve.** Yahoo moved it behind
+> an approval process — request access at
+> [sports.yahoo.com/developer/access](https://sports.yahoo.com/developer/access/),
+> which asks for your use case, expected users, and an existing client id.
+> Fantasy Sports no longer appears in the permission list when creating an app,
+> and an older app that still lists it will pass authorization and then be
+> refused by the API with `403 This application is not authorized to perform
+> this action`. If you have such an app, keep it: its client id is what the
+> access form asks for, and a new app cannot be given that permission.
+
 First you need a Yahoo app, which is where the consumer key and secret come
 from. Create one at [developer.yahoo.com/apps/create](https://developer.yahoo.com/apps/create/)
 and set:
