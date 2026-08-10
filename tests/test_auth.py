@@ -302,6 +302,15 @@ def test_authorize_request_names_a_scope():
     assert query['scope'] == ['fspt-r']
 
 
+def test_authorize_request_forces_a_fresh_consent():
+    """Yahoo re-issues against a grant it already holds, scope request or not,
+    so a re-authorization has to ask for the consent screen explicitly."""
+    query = urllib.parse.parse_qs(
+        urllib.parse.urlparse(auth.authorize_url('KEY', 'oob', 'STATE')).query)
+
+    assert query['prompt'] == ['consent']
+
+
 def test_scope_is_read_only():
     """Nothing here writes to a league, and fspt-w is refused for apps
     without it -- so asking for write would fail apps that otherwise work."""

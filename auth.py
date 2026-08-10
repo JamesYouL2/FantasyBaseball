@@ -84,6 +84,14 @@ def authorize_url(key, redirect, state):
         # exactly what was asked for, so omitting this yields one with no
         # scopes at all: it authenticates, and is then refused every endpoint.
         'scope': config.scope(),
+        # Force the consent screen rather than accept a grant Yahoo already
+        # has on file. Yahoo remembers what an account previously approved for
+        # an app, and re-issues against that -- so an authorization made before
+        # the scope above was requested keeps handing back codes for the older,
+        # emptier grant, and asking for more scope changes nothing. Yahoo
+        # validates this parameter (an unknown value is rejected outright), so
+        # it is a supported request rather than a hopeful one.
+        'prompt': 'consent',
     })
 
 
