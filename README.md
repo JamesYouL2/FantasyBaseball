@@ -38,6 +38,7 @@ long they live, because that decides how carefully each has to be handled:
 | Access and refresh tokens | An hour / until revoked | `auth/token.json` | `YAHOO_TOKEN_FILE` (path) |
 | League id | — | `leagueid.ini` | `YAHOO_LEAGUE_ID` (value) |
 | Redirect URI | — | — | `YAHOO_REDIRECT_URI` (value) |
+| OAuth scope | — | — | `YAHOO_SCOPE` (default `fspt-r`) |
 
 The token file is the only one the daily path ever writes, and it holds nothing
 that cannot be thrown away: delete it and `uv run auth.py` mints another. The
@@ -46,16 +47,20 @@ nothing that runs daily can damage it. All of them are gitignored.
 
 First you need a Yahoo app, which is where the consumer key and secret come
 from. Create one at [developer.yahoo.com/apps/create](https://developer.yahoo.com/apps/create/)
-with Fantasy Sports read permission, and set its redirect URI to
+and set:
 
-```
-http://localhost:8731/callback
-```
+- **API Permissions** → tick **Fantasy Sports**, with **Read**. Nothing works
+  without this; it is what makes the `fspt-r` scope grantable.
+- **OAuth Client Type** → **Confidential Client**. The token exchange here
+  authenticates with the consumer secret.
+- **Redirect URI** → anything valid, e.g. `https://localhost:8080/callback`.
+  It is not used by default, but the form requires one.
 
-Yahoo does not accept a loopback redirect URI on every app. If yours refuses,
-register nothing and carry on — `auth.py` detects it, explains it, and offers
-out-of-band authorization instead, which shows you a code to paste. Either way
-works; it only changes how the code gets back to you.
+Yahoo rejects any `http://` redirect URI, loopback included, so the flow where
+a local server catches the redirect and there is nothing to copy is not
+available on Yahoo. Authorization uses `oob` instead: Yahoo shows a code and
+you paste it once. If you do register a URI a local server can serve, set
+`$YAHOO_REDIRECT_URI` and `auth.py` will use it.
 
 Then:
 
@@ -91,28 +96,36 @@ See "Keeping credentials out of the repo" below before you start.
 
 ## Authorizing
 
-`uv run auth.py` is a one-time step. It opens Yahoo in a browser, catches the
-redirect on `http://localhost:8731/callback`, and writes the tokens. There is
-nothing to copy and no verifier code to retype.
+`uv run auth.py` is a one-time step. It opens Yahoo in a browser, you approve,
+Yahoo shows a code, you paste it once, and the tokens are written.
 
-That works only if the app at
-[developer.yahoo.com/apps](https://developer.yahoo.com/apps/) lists that exact
-redirect URI. Yahoo refuses any other, and the browser shows an unattributed
-"something went wrong" when it does — so `auth.py` puts the request to Yahoo
+A redirect URI has to match what the app registers, exactly, or Yahoo refuses
+the whole request — and the browser renders that refusal as an unattributed
+"something went wrong", naming no field. So `auth.py` puts the request to Yahoo
 first and prints the real reason instead:
 
 ```
 Yahoo rejected the authorization request: invalid redirect uri.
 ```
 
-It then offers out-of-band authorization, where Yahoo displays a code for you
-to paste, and remembers that choice beside the credentials so later runs skip
-the whole exchange. `$YAHOO_REDIRECT_URI` overrides it if you register a real
-redirect URI later.
+It then offers `oob` and remembers the choice beside the credentials, so later
+runs skip the exchange entirely. If you set `$YAHOO_REDIRECT_URI` to an
+`http://localhost:PORT/…` URI that your app really lists, `auth.py` serves it
+with a one-shot local server and nothing needs copying at all — but Yahoo does
+not currently accept registering one.
 
 Inside WSL, `webbrowser` picks a handler with no desktop behind it and silently
 opens nothing, so the URL is opened through Windows interop (`wslview`, then
 PowerShell, then `explorer.exe`) and printed either way.
+
+The request asks for the `fspt-r` scope — Fantasy Sports, read. This is not
+optional and not inherited from the app's settings: Yahoo grants a token
+exactly the scopes its authorization named, so a request that names none
+produces a token that authenticates perfectly and is then refused every
+endpoint with `403 This application is not authorized to perform this action`.
+If you see that, the token predates the scope being requested; re-run
+`auth.py`. Read rather than write on purpose — nothing here writes to a
+league, and Yahoo refuses `fspt-w` outright for apps not permitted it.
 
 After that, nothing opens a browser again. Refresh tokens last until they are
 revoked, so `main.py` renews the hourly access token by itself and can run

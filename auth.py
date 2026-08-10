@@ -80,6 +80,10 @@ def authorize_url(key, redirect, state):
         'redirect_uri': redirect,
         'response_type': 'code',
         'state': state,
+        # Naming the scope is not optional. Yahoo issues a token carrying
+        # exactly what was asked for, so omitting this yields one with no
+        # scopes at all: it authenticates, and is then refused every endpoint.
+        'scope': config.scope(),
     })
 
 
@@ -109,6 +113,13 @@ def preflight(url):
 def resolve(complaint, key, redirect, state):
     """Explain Yahoo's complaint, and offer the fallback when there is one."""
     print(f"Yahoo rejected the authorization request: {complaint}.\n")
+
+    if 'scope' in complaint.lower():
+        raise SystemExit(
+            f"The app is not permitted the scope this asks for "
+            f"({config.scope()}). At https://developer.yahoo.com/apps/ give it "
+            f"Fantasy Sports read access, or point $YAHOO_SCOPE at a scope it "
+            f"does have.")
 
     if 'redirect' not in complaint.lower():
         raise SystemExit(

@@ -41,9 +41,23 @@ DEFAULT_CREDENTIALS_FILE = 'auth/oauth2yahoo.json'
 DEFAULT_TOKEN_FILE = 'auth/token.json'
 LEAGUE_ID_FILE = 'leagueid.ini'
 
-# Loopback, because a redirect to 127.0.0.1 is the only kind auth.py can catch
-# by itself. See auth.py for what happens when the app is registered otherwise.
-DEFAULT_REDIRECT_URI = 'http://localhost:8731/callback'
+# Out-of-band, because Yahoo will not register an http redirect URI at all --
+# it rejects even http://localhost:PORT/ with "invalid redirect uri" -- and an
+# https one cannot be caught by a local server without a certificate the
+# browser trusts. That rules out the no-copying loopback flow for Yahoo
+# specifically, so the flow that always works is the default. auth.py still
+# serves a loopback URI if one is configured and registered.
+DEFAULT_REDIRECT_URI = 'oob'
+
+# Yahoo's Fantasy Sports read scope. A token is granted exactly the scopes its
+# authorize request asked for, and a request naming none gets none -- which
+# produces a token that authenticates perfectly and is then refused every
+# endpoint with 403, the app's own permissions notwithstanding.
+#
+# Read, not write: this project only ever reads a league. Yahoo rejects fspt-w
+# for an app not permitted it, so asking for more than is needed would also be
+# a way to fail on apps that would otherwise work.
+DEFAULT_SCOPE = 'fspt-r'
 
 
 # --- Paths ------------------------------------------------------------------
@@ -73,6 +87,11 @@ def redirect_uri():
     if from_env:
         return from_env
     return _read_json(credentials_file()).get('redirect_uri') or DEFAULT_REDIRECT_URI
+
+
+def scope():
+    """The OAuth scope to ask Yahoo for. $YAHOO_SCOPE overrides."""
+    return os.environ.get('YAHOO_SCOPE', DEFAULT_SCOPE)
 
 
 def save_redirect_uri(value):

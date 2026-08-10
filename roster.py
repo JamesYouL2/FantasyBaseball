@@ -51,13 +51,14 @@ class YahooRoster:
                 f"Yahoo refused the request (403): {_yahoo_error(response)}\n"
                 f"\n"
                 f"The token itself is fine -- Yahoo answers an invalid one with "
-                f"401, not 403 -- so this is the app's permissions rather than "
-                f"the login. At https://developer.yahoo.com/apps/ open the app, "
-                f"tick Fantasy Sports under API Permissions with Read access, "
-                f"and save.\n"
-                f"Then delete {config.token_file()} and run `uv run auth.py` "
-                f"again: the current token was granted under the old "
-                f"permissions and cannot inherit the new ones.")
+                f"401, not 403 -- so what it lacks is scope. A token carries "
+                f"exactly the scope its authorization asked for, and cannot "
+                f"gain one afterwards.\n"
+                f"  1. Delete {config.token_file()}\n"
+                f"  2. uv run auth.py   (it now asks for {config.scope()})\n"
+                f"If it still fails, the app itself is not permitted that "
+                f"scope: at https://developer.yahoo.com/apps/ give it Fantasy "
+                f"Sports read access.")
 
         if not response.ok:
             raise YahooAPIError(

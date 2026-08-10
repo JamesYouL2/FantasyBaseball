@@ -16,6 +16,7 @@ import socket
 import stat
 import threading
 import time
+import urllib.parse
 
 import pytest
 import requests
@@ -289,6 +290,39 @@ def test_code_is_read_from_a_pasted_url_or_taken_bare(pasted, expected):
 def test_junk_paste_is_rejected(pasted):
     with pytest.raises(SystemExit):
         auth.code_from(pasted)
+
+
+# --- auth.py: asking for a scope --------------------------------------------
+
+def test_authorize_request_names_a_scope():
+    """Omitting it yields a token with none, refused everywhere with 403."""
+    query = urllib.parse.parse_qs(
+        urllib.parse.urlparse(auth.authorize_url('KEY', 'oob', 'STATE')).query)
+
+    assert query['scope'] == ['fspt-r']
+
+
+def test_scope_is_read_only():
+    """Nothing here writes to a league, and fspt-w is refused for apps
+    without it -- so asking for write would fail apps that otherwise work."""
+    assert 'w' not in config.scope().rsplit('-', 1)[-1]
+
+
+def test_scope_can_be_overridden(monkeypatch):
+    monkeypatch.setenv('YAHOO_SCOPE', 'fspt-w')
+    query = urllib.parse.parse_qs(
+        urllib.parse.urlparse(auth.authorize_url('KEY', 'oob', 'STATE')).query)
+
+    assert query['scope'] == ['fspt-w']
+
+
+def test_a_scope_the_app_lacks_is_reported_as_such(store, monkeypatch):
+    with pytest.raises(SystemExit) as raised:
+        auth.resolve('invalid scope', 'KEY', 'oob', 'STATE')
+
+    message = str(raised.value)
+    assert 'scope' in message and 'developer.yahoo.com' in message
+    assert 'YAHOO_SCOPE' in message
 
 
 # --- auth.py: naming Yahoo's rejection --------------------------------------
